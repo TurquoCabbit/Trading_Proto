@@ -1,41 +1,47 @@
+from logging import log
 from pybit import HTTP
 from time import sleep
+from datetime import datetime
 import os
 import json
+import gc
 import random
 random.seed()
 
+import Make_log
 import key
+import Update_Symbol_List
 
 class Symbol:
     def __init__(self, Symbol, tick_size, qty_step) -> None:
-        self.Symbol = Symbol
+        self.symbol = Symbol
         self.tick_size = (float)(tick_size)
         self.qty_step = (float)(qty_step)
         self.opened = False
         self.isolate = False
-        self.leverage = Leverage
-        self.tpsl_mode = 'Full'
+        self.leverage = 0
+        self.tpsl_mode = 'Partial'
 
 class Open:
     def __init__(self) -> None:
         self.ID = 0
         self.sym = ''
         self.price = 0
+        self.side = ''
         self.qty = 0
         self.TP = 0
         self.SL = 0
 
 Symbol_List = []
 
-qty_step_list = []
-
 Token_List = []
 
+Position_List = {'symbol' : [], 'Buy' : [], 'Sell' : []}
 
 current_position_qty = 0
 
 def Error_Msg(str, extreme = 0):
+    log.log(str)
     if extreme:
         os.system('echo [41m{}'.format(str))
         os.system('echo [0m{}'.format('--------------------------------------------------------------------'))
@@ -44,12 +50,13 @@ def Error_Msg(str, extreme = 0):
         os.system('echo [0m{}'.format('--------------------------------------------------------------------'))
 
 def System_Msg(str):
+    log.log(str)
     os.system('echo [33m{}'.format(str))
     os.system('echo [0m')
     # os.system('echo [0m{}'.format('--------------------------------------------------------------------'))
 
-def Print_and_pause(str):
-    print(str)
+def Print_and_pause(str = ''):
+    log.show(str)
     os.system('pause')
 
 def rand_symbol():
@@ -59,14 +66,20 @@ def rand_symbol():
     else:
         return rand
 
+        
+def rand_side():
+    if random.randint(0, 1):
+        return "Buy"
+    else:
+        return "Sell"
+        
+
 def qty_trim(qty, step):
     digi = abs((int)(format(step, '1E').split('E')[1]))
     qty = (int)(qty * pow(10, digi))
     step = (int)(step * pow(10, digi))
-    qty -= qty % step
-    
+    qty -= qty % step    
     return qty / pow(10, digi)
-
 
 def price_trim(price, tick, up = 0):
     digi = abs((int)(format(tick, '1E').split('E')[1]))
@@ -76,32 +89,43 @@ def price_trim(price, tick, up = 0):
     if up:
         price -= price % tick - tick
     else:
-        price -= price % tick
-    
+        price -= price % tick    
     return price / pow(10, digi)
 
-##############################################################################################################################
-Cfg_missing = True
-file_list = os.listdir()
-for i in file_list:
-    if i.endswith('.json'):
-        file = open(i)
-        Cfg_missing = False
-        break
 
-if Cfg_missing:
+
+##############################################################################################################################
+### init log
+log = Make_log.Log('log')
+log.log_and_show('========================START=========================')
+
+##############################################################################################################################
+### Load Cfg File
+if not os.path.isfile('cfg.json'):
     System_Msg('Cfg.json file missing')
-    print('cfg.json example : ')
-    print('{\n\t\"Test_net\" : ,\n\t\"Max_operate_position\" : ,\n\t\"operate_USDT\" : ,\n\t\"Leverage\" : ,')
-    print('\t"TP_percentage\" : ,\n\t\"SL_percentage\" : ,\n\Trade_all\" : ,\n\t\"Token\" : [')
-    print('\t    "BTC\",\n\t    \"ETH\",\n\t    .. ,\n\t    .. ,\n\t]\n}')
+    log.show('cfg.json example : ')
+    log.show('{')
+    log.show('\t\"Test_net\" : ,')
+    log.show('\t\"Max_operate_position\" : ,')
+    log.show('\t\"operate_USDT\" : ,')
+    log.show('\t\"Leverage\" : ,')
+    log.show('\t"TP_percentage\" : ,')
+    log.show('\t\"SL_percentage\" : ,')
+    log.show('\tTrade_all\" : ,')
+    log.show('\t\"Token\" : [')
+    log.show('\t\t\"BTC\",')
+    log.show('\t\t\"ETH\",')
+    log.show('\t\t.. ,')
+    log.show('\t\t.. ,')
+    log.show('\t]')
+    log.show('}')
     
     os.system('pause')
     os._exit(0)
 
 else:
-    Cfg_data = json.load(file)
-    file.close()
+    with open('cfg.json') as file:
+        Cfg_data = json.load(file)
 
     Test = Cfg_data['Test_net']
     Max_operate_position = Cfg_data['Max_operate_position']
@@ -117,78 +141,100 @@ else:
             Token_List.append('{}USDT'.format(i))
 
 ##############################################################################################################################
+### Load Symbol List
+if not os.path.isfile('Symbol_list.json'):
+    if Update_Symbol_List.Querry_USDT_Perpetual_Symbol():
+        with open('Symbol_list.json', 'r') as file:
+            Symbol_querry = json.load(file)
+else:    
+    with open('Symbol_list.json', 'r') as file:
+        Symbol_querry = json.load(file)
+
+    if Symbol_querry['version'] != Update_Symbol_List.Symbol_list_ver:
+        if Update_Symbol_List.Querry_USDT_Perpetual_Symbol():
+            with open('Symbol_list.json', 'r') as file:
+                Symbol_querry = json.load(file)
+
+##############################################################################################################################
 ### Connect client
 try:
     if Test:
-        client = HTTP(key.host_test, api_key=key.api, api_secret=key.api_secret)
+        log.log_and_show('Operate on Test Net !!!')
+        client = HTTP(key.test_host, api_key=key.test_api, api_secret=key.test_secret)
     else:
-        client = HTTP(key.host, api_key=key.api, api_secret=key.api_secret)
+        client = HTTP(key.host, api_key=key.api, api_secret=key.secret)
 except :
     Error_Msg('Connect Error')
     os.system('pause')
     os._exit(0)
 
 ### Check Sym list
-try:
-    Symbol_querry = client.query_symbol()
-    if not Symbol_querry['ret_code']:
-        if not Trade_all:
-            for i in Token_List:
-                exist = 0
-                for j in Symbol_querry['result']:
-                    if i == j['name']:
-                        exist = 1
-                        Symbol_List.append(Symbol(i, j['price_filter']['tick_size'], j['lot_size_filter']['qty_step']))
-                        break
-                if not exist:
-                    raise Exception('\"{}\" not exist in Symbol list'.format(i))
-                else:
-                    exist = 0
-        else:
-            for i in Symbol_querry['result']:
-                if i['name'].endswith('USDT'):
-                    # print('\t\t\"{}\",'.format(i['name'].split('USDT')[0]))
-                    Symbol_List.append(Symbol(i['name'], i['price_filter']['tick_size'], i['lot_size_filter']['qty_step']))
-        
-    else:
-        raise Exception('Return code :{}'.format(Symbol_querry['ret_code']))
-
-except Exception as Err:
-    Error_Msg(Err)
-    os.system('pause')
-    os._exit(0)
-
-
+if Trade_all:
+    for i in Symbol_querry['data']:
+        Symbol_List.append(Symbol(i['name'], i['price_filter']['tick_size'], i['lot_size_filter']['qty_step']))
+else:
+    for i in Token_List:
+        if i in Symbol_querry['name']:
+            sym = Symbol_querry['data'][Symbol_querry['name'].index(i)]
+            Symbol_List.append(Symbol(sym['name'], sym['price_filter']['tick_size'], sym['lot_size_filter']['qty_step']))
+sleep(1)
 while True:
     try:
         ### Querry current wallet balance
-        wallet = client.get_wallet_balance(coin="USDT")
-        if not wallet['ret_code']:
-            wallet_available = wallet['result']['USDT']['available_balance']
-            wallet_equity = wallet['result']['USDT']['equity']
-            # print('wallet_available : {}'.format(wallet_available))
-            # print('wallet_equity : {}'.format(wallet_equity))
-        else:
-            raise Exception('Querry Wallet Fail !!\tReturn code: {}\tReturn msg: {}'.format(wallet['ret_code'], wallet['ret_msg']))
+        if False:
+            wallet = client.get_wallet_balance(coin="USDT")
+            if not wallet['ret_code']:
+                wallet_available = wallet['result']['USDT']['available_balance']
+                wallet_equity = wallet['result']['USDT']['equity']
+                log.log_and_show('wallet_available : {}'.format(wallet_available))
+                log.log_and_show('wallet_equity : {}'.format(wallet_equity))
+            else:
+                raise Exception('Querry Wallet Fail !!\tReturn code: {}\tReturn msg: {}'.format(wallet['ret_code'], wallet['ret_msg']))
 
 
         ### Querry current position
+        position = client.my_position(endpoint = '/private/linear/position/list')
+        if not position['ret_code']:
+            for i in position['result']:
+                if i['is_valid']:
+                    if len(Position_List['symbol']) == 0 or Position_List['symbol'][-1] != i['data']['symbol']:
+                        Position_List['symbol'].append(i['data']['symbol'])
+                        Position_List['Buy'].append(i['data'])
+                    else:
+                        Position_List['Sell'].append(i['data'])
+                else:
+                    raise Exception('Querry Position data NOT valid')
+        else:
+            raise Exception('Querry Position Fail !!\tReturn code: {}\tReturn msg: {}'.format(position['ret_code'], position['ret_msg']))
+        
+        del position
+        gc.collect()
+        
         current_position_qty = 0
         for i in Symbol_List:
-            position = client.my_position(symbol = i.Symbol)
-            if not position['ret_code']:
-                i.isolate = position['result'][0]['is_isolated']
-                i.leverge = (int)(position['result'][0]['leverage'])
-                i.tpsl_mode = position['result'][0]['tp_sl_mode']
-                if position['result'][0]['size'] > 0:
+            if i.symbol in Position_List['symbol']:
+                index = Position_List['symbol'].index(i.symbol)
+                
+                if Position_List['Buy'][index]['is_isolated'] and Position_List['Sell'][index]['is_isolated']:
+                    i.isolate = True
+                else:
+                    i.isolate = False
+                
+                if Position_List['Buy'][index]['leverage'] == Leverage and Position_List['Sell'][index]['leverage'] == Leverage:
+                    i.leverage = Leverage
+                else:
+                    i.leverage = 0
+
+                if Position_List['Buy'][index]['tp_sl_mode'] == 'Full' and Position_List['Sell'][index]['tp_sl_mode'] == 'Full':
+                    i.tpsl_mode = 'Full'
+                else:
+                    i.tpsl_mode = 'Partial'
+
+                if Position_List['Buy'][index]['size'] + Position_List['Sell'][index]['size'] > 0:
                     current_position_qty += 1
-                    i.opened = True
-            else:
-                raise Exception('Querry Position Fail !!\tReturn code: {}\tReturn msg: {}'.format(position['ret_code'], position['ret_msg']))
-            sleep(0.25)
+                    i.opened =True
 
-        print('Opened order : {}'.format(current_position_qty))
-
+        log.log_and_show('Opened order : {}'.format(current_position_qty))
 
         ### Randonly open position
         if current_position_qty < Max_operate_position:
@@ -196,12 +242,11 @@ while True:
 
             # Random pick
             open.ID = rand_symbol()
-            open.sym = Symbol_List[open.ID].Symbol
+            open.sym = Symbol_List[open.ID].symbol
 
             # Set Full Position TP/SL
             if Symbol_List[open.ID].tpsl_mode != 'Full':
                 temp = client.full_partial_position_tp_sl_switch(symbol = open.sym, tp_sl_mode = 'Full')
-                # print(temp)
                 if temp['ret_code'] == 0:
                     raise Exception('Set Full Position TP/SL Error\tReturn code: {}\tReturn msg: {}'.format(temp['ret_code'], temp['ret_msg']))
                 Symbol_List[open.ID].tpsl_mode = 'Full'
@@ -209,18 +254,17 @@ while True:
             # Switch to isolated margin mode and set leverage
             if Symbol_List[open.ID].isolate != True:
                 temp = client.cross_isolated_margin_switch(symbol = open.sym, is_isolated = True, buy_leverage = Leverage, sell_leverage = Leverage)
-                # print(temp)
                 if temp['ret_code']:
                     raise Exception('Set Margin mode Error\tReturn code: {}\tReturn msg: {}'.format(temp['ret_code'], temp['ret_msg']))
                 Symbol_List[open.ID].isolate = True
-                Symbol_List[open.ID].leverge = Leverage
+                Symbol_List[open.ID].leverage = Leverage
 
             # Modify leverage
-            if Symbol_List[open.ID].leverge != Leverage:
+            if Symbol_List[open.ID].leverage != Leverage:
                 temp = client.set_leverage(symbol = open.sym, buy_leverage = Leverage, sell_leverage = Leverage)
                 if temp['ret_code']:
                     raise Exception('Set Leverage Error\tReturn code: {}\tReturn msg: {}'.format(temp['ret_code'], temp['ret_msg']))
-                Symbol_List[open.ID].leverge = Leverage
+                Symbol_List[open.ID].leverage = Leverage
 
             # Querry price
             temp = client.latest_information_for_symbol(symbol = open.sym)
@@ -229,18 +273,22 @@ while True:
             else:
                 open.price = (float)(temp['result'][0]['last_price'])
                 
-
             # Calculate TP/SL
+            open.side = rand_side()
             open.qty = qty_trim((operate_USDT * Leverage / open.price), Symbol_List[open.ID].qty_step)
-            open.TP = price_trim((1 + (TP_percentage / Leverage / 100)) * open.price, Symbol_List[open.ID].tick_size)
-            open.SL = price_trim((1 - (SL_percentage / Leverage / 100)) * open.price, Symbol_List[open.ID].tick_size, True)
-
-            print('Open {} {} Order at {} with TP : {}, SL : {}'.format(open.qty, open.sym, open.price, open.TP, open.SL))
+            if open.side == 'Buy':
+                open.TP = price_trim((1 + (TP_percentage / Leverage / 100)) * open.price, Symbol_List[open.ID].tick_size)
+                open.SL = price_trim((1 - (SL_percentage / Leverage / 100)) * open.price, Symbol_List[open.ID].tick_size, True)
+            elif open.side == 'Sell':
+                open.TP = price_trim((1 - (TP_percentage / Leverage / 100)) * open.price, Symbol_List[open.ID].tick_size)
+                open.SL = price_trim((1 + (SL_percentage / Leverage / 100)) * open.price, Symbol_List[open.ID].tick_size, True)
+            
+            log.log_and_show('Open {} {} {} order at {} with TP : {}, SL : {}'.format(open.qty, open.sym, open.side, open.price, open.TP, open.SL))
             
 
             # Open position
             open.posi = client.place_active_order(symbol = open.sym,\
-                                                side = "Buy",\
+                                                side = open.side,\
                                                 order_type = "Market",\
                                                 qty = open.qty,\
                                                 time_in_force = "GoodTillCancel",\
@@ -252,12 +300,12 @@ while True:
             if open.posi['ret_code'] != 0:
                 raise Exception('{} Order Create Fail !!\tReturn code: {}\tReturn msg: {}'.format(open.sym, open.posi['ret_code'], open.posi['ret_msg']))
             elif open.posi['ret_msg'] != 'OK':
-                print('{} Order Create Successfully !!\tReturn msg: {}'.format(open.sym,open.posi['ret_msg']))
+                log.log_and_show('{} Order Create Successfully !!\tReturn msg: {}'.format(open.sym,open.posi['ret_msg']))
             else:
-                print('{} Order Create Successfully !!'.format(open.sym))
+                log.log_and_show('{} Order Create Successfully !!'.format(open.sym))
             
             del open
-            sleep(30)
+            sleep(5)
         else:
             sleep(60)
 

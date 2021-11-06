@@ -2,10 +2,13 @@ from pybit import HTTP
 import os
 import json
 
+import Make_log
+
 Symbol_list_ver = 'A'
 Symbol_list = {'version' : Symbol_list_ver, 'name' : [], 'data' : []}
 
 def Error_Msg(str, extreme = 0):
+    log.log(str)
     if extreme:
         os.system('echo [41m{}'.format(str))
         os.system('echo [0m{}'.format('--------------------------------------------------------------------'))
@@ -46,14 +49,12 @@ def Querry_USDT_Perpetual_Symbol(testnet = 0):
     return False
 
 if __name__ == '__main__':
+    ### init log
+    log = Make_log.Log('')
+    log.log_and_show('========================START=========================')
+
     Querry_USDT_Perpetual_Symbol()
 
-    print('Querry all USDT Perpetual Symbol done!!')
+    log.show('Querry all USDT Perpetual Symbol done!!')
     os.system('pause')
     os._exit(0)
-
-
-# with open('Symbol_list.json', 'r') as file:
-#     ttt = json.load(file)
-#     for i in ttt:
-#         print(i['name'])
