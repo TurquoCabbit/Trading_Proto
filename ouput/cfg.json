@@ -1,0 +1,29 @@
+{
+    "Version": "1.01",
+    "Run_on_testnet": true,
+    "Operate_position": 10,
+    "Order_value_USDT": 10,
+    "Leverage": 20,
+    "TP_percentage": 60,
+    "SL_percentage": 8,
+    "Favorite_group": "all",
+    "open_interval": 1,
+    "poll_interval": 60,
+    "Group_0": [
+        "BTC",
+        "ETH",
+        "DOT",
+        "SOL",
+        "BNB",
+        "FTT",
+        "UNI",
+        "AXS",
+        "LUNA",
+        "ATOM",
+        "AAVE",
+        "FTM",
+        "BIT",
+        "ADA",
+        "ICP"
+    ]
+}

@@ -1,5 +1,4 @@
 from pybit import HTTP
-from time import sleep
 from time import localtime
 from time import strftime
 from datetime import datetime
@@ -13,12 +12,15 @@ random.seed()
 import Make_log
 import key
 import Update_Symbol_List
+import Loading_animation
 
 ##########################################################
-Version = '1.0'
+Version = '1.01'
 Date = '2021/11/07'
 
 Symbol_List = []
+
+delay = Loading_animation.delay_anima()
 
 class Symbol:
     def __init__(self, Symbol, tick_size, qty_step) -> None:
@@ -376,9 +378,9 @@ while True:
             
             del open
             gc.collect()
-            sleep(cfg.open_order_interval)
+            delay.delay(cfg.open_order_interval)
         else:
-            sleep(cfg.poll_order_interval)
+            delay.anima_bar(cfg.poll_order_interval)
 
 
     except Exception as Err:
