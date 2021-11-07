@@ -16,6 +16,7 @@ import Update_Symbol_List
 
 ##########################################################
 Version = '1.0'
+Date = '2021/11/07'
 
 Symbol_List = []
 
@@ -163,6 +164,7 @@ def price_trim(price, tick, up = 0):
 ##############################################################################################################################
 ### init log
 log = Make_log.Log('log')
+log.log_and_show('Bybit USDT perpetual trading bot ver {} {}'.format(Version, Date))
 log.log_and_show('========================START=========================')
 
 ##############################################################################################################################
@@ -187,6 +189,13 @@ if (int)(cfg.version.split('.')[0]) != (int)(Version.split('.')[0]):
 elif (int)(cfg.version.split('.')[1]) < (int)(Version.split('.')[1]):
     #Sub version different
     cfg.update_version()
+
+
+if cfg.open_order_interval < 1:
+    cfg.open_order_interval = 1
+    
+if cfg.poll_order_interval < 10:
+    cfg.poll_order_interval = 10
 
 ##############################################################################################################################
 ### Load Symbol List
@@ -282,13 +291,15 @@ while True:
                 if Position_List['Buy'][index]['position_value'] + Position_List['Sell'][index]['position_value'] > 0:
                     current_position_qty += 1
                     if Position_List['Buy'][index]['position_value'] > 0:
-                        opened_order.append('\t{}\t{}'.format(Position_List['symbol'], 'Buy'))
+                        opened_order.append('  {}\t{}'.format(Position_List['symbol'][index], 'Buy'))
                     elif Position_List['Sell'][index]['position_value'] > 0:
-                        opened_order.append('\t{}\t{}'.format(Position_List['symbol'], 'Sell'))
+                        opened_order.append('  {}\t{}'.format(Position_List['symbol'][index], 'Sell'))
                     i.opened =True
 
         log.show('')       
-        log.log_and_show('Opened order: {}'.format(current_position_qty))
+        log.log_and_show('Opened Position: {}'.format(current_position_qty))
+        for i in opened_order:
+            log.log_and_show('\t{}'.format(i))
 
         del opened_order
         del position
@@ -365,9 +376,9 @@ while True:
             
             del open
             gc.collect()
-            sleep(5)
+            sleep(cfg.open_order_interval)
         else:
-            sleep(60)
+            sleep(cfg.poll_order_interval)
 
 
     except Exception as Err:
