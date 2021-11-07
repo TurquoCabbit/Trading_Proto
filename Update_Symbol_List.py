@@ -43,7 +43,7 @@ def Querry_USDT_Perpetual_Symbol(testnet = 0):
             Symbol_list['data'].append(i)
 
     with open('Symbol_list.json', 'w') as file:
-        json.dump(Symbol_list, file)
+        json.dump(Symbol_list, file, indent = 4)
         return True
 
     return False

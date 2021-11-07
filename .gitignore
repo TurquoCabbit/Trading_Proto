@@ -10,3 +10,5 @@ dist/
 log/
 #
 test.py
+#
+*.json
