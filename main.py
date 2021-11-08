@@ -11,12 +11,11 @@ import random
 random.seed()
 
 import Make_log
-import key
 import Update_Symbol_List
 import Loading_animation
 
 ##########################################################
-Version = '1.02'
+Version = '1.03'
 Date = '2021/11/08'
 
 Start_time = (int)(time())
@@ -220,12 +219,21 @@ else:
 ##############################################################################################################################
 ### Connect client
 try:
-    if len(sys.argv) == 3 and not cfg.Test_net:
-        # main net api and serect were passed
-        log.log_and_show('Operate on Main Net !!!')
-        client = HTTP(key.host, api_key=sys.argv[1], api_secret=sys.argv[2])
+    if len(sys.argv) == 3:
+        if cfg.Test_net:
+            # main net api and serect were passed
+            log.log_and_show('Operate on Test Net !!!')
+            client = HTTP('https://api-testnet.bybit.com', api_key=sys.argv[1], api_secret=sys.argv[2])
+        else:
+            # main net api and serect were passed
+            log.log_and_show('Operate on Main Net !!!')
+            client = HTTP('https://api.bybit.com', api_key=sys.argv[1], api_secret=sys.argv[2])
     else:
-        client = HTTP(key.test_host, api_key=key.test_api, api_secret=key.test_secret)
+        log.log_and_show('Execution cmd :')
+        log.log_and_show('main.exe <api key> <api secret>')
+        os.system('pause')
+        os._exit(0)
+
 except :
     Error_Msg('Connect Error')
     os.system('pause')
