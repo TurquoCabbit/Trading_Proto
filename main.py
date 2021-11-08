@@ -15,7 +15,7 @@ import Update_Symbol_List
 import Loading_animation
 
 ##########################################################
-Version = '1.03'
+Version = '1.04'
 Date = '2021/11/08'
 
 Start_time = (int)(time())
@@ -266,6 +266,8 @@ while True:
 
         ### Querry current position
         current_position_qty = 0
+        current_position_buy = 0
+        current_position_sel = 0
         Position_List = {'symbol' : [], 'Buy' : [], 'Sell' : []}
         opened_order = []
 
@@ -305,8 +307,10 @@ while True:
                 if Position_List['Buy'][index]['position_value'] + Position_List['Sell'][index]['position_value'] > 0:
                     current_position_qty += 1
                     if Position_List['Buy'][index]['position_value'] > 0:
+                        current_position_buy += 1
                         opened_order.append('  {}\t{}'.format(Position_List['symbol'][index], 'Buy'))
                     elif Position_List['Sell'][index]['position_value'] > 0:
+                        current_position_sel += 1
                         opened_order.append('  {}\t{}'.format(Position_List['symbol'][index], 'Sell'))
                     i.opened = True
                 else:
@@ -314,7 +318,7 @@ while True:
 
 
         log.show('')       
-        log.log_and_show('Opened Position: {}'.format(current_position_qty))
+        log.log_and_show('Opened Position: {}\tBuy:{} Sell:{}'.format(current_position_qty, current_position_buy, current_position_sel))
         for i in opened_order:
             log.log_and_show('\t{}'.format(i))
 
