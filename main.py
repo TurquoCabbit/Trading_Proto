@@ -138,7 +138,6 @@ def rand_symbol():
         return rand_symbol()
     else:
         return rand
-
         
 def rand_side():
     if random.randint(0, 1):
@@ -309,7 +308,10 @@ while True:
                         opened_order.append('  {}\t{}'.format(Position_List['symbol'][index], 'Buy'))
                     elif Position_List['Sell'][index]['position_value'] > 0:
                         opened_order.append('  {}\t{}'.format(Position_List['symbol'][index], 'Sell'))
-                    i.opened =True
+                    i.opened = True
+                else:
+                    i.opened = False
+
 
         log.show('')       
         log.log_and_show('Opened Position: {}'.format(current_position_qty))
