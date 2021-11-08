@@ -38,7 +38,6 @@ class delay_anima:
             print('  Run time : {:d} days {:02d} h {:02d} m {:02d} s'. format((int)(d), (int)(h), (int)(m), (int)(s)), end = '\r')
             sleep(1 + go - done)
             self.cnt -= 1
-        print('')
 
     
     def delay(self, time):
