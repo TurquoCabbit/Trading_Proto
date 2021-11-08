@@ -1,6 +1,7 @@
 from pybit import HTTP
 from time import localtime
 from time import strftime
+from time import time
 from datetime import datetime
 import sys
 import os
@@ -15,8 +16,10 @@ import Update_Symbol_List
 import Loading_animation
 
 ##########################################################
-Version = '1.01'
-Date = '2021/11/07'
+Version = '1.02'
+Date = '2021/11/08'
+
+Start_time = (int)(time())
 
 Symbol_List = []
 
@@ -239,13 +242,15 @@ else:
             Symbol_List.append(Symbol(sym['name'], sym['price_filter']['tick_size'], sym['lot_size_filter']['qty_step']))
 
 while True:
+    log.log_and_show(log.get_run_time(Start_time))
+    
     try:
         ### Querry current wallet balance
         wallet = client.get_wallet_balance(coin="USDT")
         if not wallet['ret_code']:
             wallet_available = wallet['result']['USDT']['available_balance']
             wallet_equity = wallet['result']['USDT']['equity']
-            log.show('')  
+            log.show('')
             log.log_and_show('Balance available:\t{:.2f}\tUSDT'.format(wallet_available))
             log.log_and_show('Balance equity:\t{:.2f}\tUSDT'.format(wallet_equity))
         else:
@@ -369,6 +374,7 @@ while True:
                                                 take_profit = open.TP,\
                                                 stop_loss = open.SL)
 
+            log.show('')
             if open.posi['ret_code'] != 0:
                 raise Exception('{} Order Create Fail !!\tReturn code: {}\tReturn msg: {}'.format(open.sym, open.posi['ret_code'], open.posi['ret_msg']))
             elif open.posi['ret_msg'] != 'OK':
@@ -380,7 +386,7 @@ while True:
             gc.collect()
             delay.delay(cfg.open_order_interval)
         else:
-            delay.anima_bar(cfg.poll_order_interval)
+            delay.anima_runtime(cfg.poll_order_interval, Start_time)
 
 
     except Exception as Err:
