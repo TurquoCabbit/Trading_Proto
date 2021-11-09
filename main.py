@@ -15,8 +15,8 @@ import Update_Symbol_List
 import Loading_animation
 
 ##########################################################
-Version = '1.04'
-Date = '2021/11/08'
+Version = '1.05'
+Date = '2021/11/09'
 
 Start_time = (int)(time())
 
@@ -193,6 +193,10 @@ elif (int)(cfg.version.split('.')[1]) < (int)(Version.split('.')[1]):
     #Sub version different
     cfg.update_version()
 
+### Check parameter
+
+if cfg.Group != 'all' and cfg.Max_operate_position > len(cfg.Token_list):
+    cfg.Max_operate_position = len(cfg.Token_list)
 
 if cfg.open_order_interval < 1:
     cfg.open_order_interval = 1
@@ -318,15 +322,15 @@ while True:
 
 
         log.show('')       
-        log.log_and_show('Opened Position: {}\tBuy:{} Sell:{}'.format(current_position_qty, current_position_buy, current_position_sel))
+        log.log_and_show('Opened Position: {}\tBuy :{} Sell :{}'.format(current_position_qty, current_position_buy, current_position_sel))
+        
         for i in opened_order:
-            log.log_and_show('\t{}'.format(i))
+            log.show('\t{}'.format(i))
 
         del opened_order
         del position
         del Position_List
-
-
+        
         ### Randonly open position
         if current_position_qty < cfg.Max_operate_position:
             open = Open()
@@ -374,7 +378,7 @@ while True:
                 open.TP = price_trim((1 - (cfg.TP_percentage / cfg.Leverage / 100)) * open.price, Symbol_List[open.ID].tick_size)
                 open.SL = price_trim((1 + (cfg.SL_percentage / cfg.Leverage / 100)) * open.price, Symbol_List[open.ID].tick_size, True)
             
-            log.log_and_show('Open {} {} {} order at {} with TP : {}, SL : {}'.format(open.qty, open.sym, open.side, open.price, open.TP, open.SL))
+            log.log_and_show('Opening {} {} {} order at {} with TP : {}, SL : {}'.format(open.qty, open.sym, open.side, open.price, open.TP, open.SL))
             
 
             # Open position
@@ -388,13 +392,13 @@ while True:
                                                 take_profit = open.TP,\
                                                 stop_loss = open.SL)
 
-            log.show('')
             if open.posi['ret_code'] != 0:
                 raise Exception('{} Order Create Fail !!\tReturn code: {}\tReturn msg: {}'.format(open.sym, open.posi['ret_code'], open.posi['ret_msg']))
             elif open.posi['ret_msg'] != 'OK':
                 log.log_and_show('{} Order Create Successfully !!\tReturn msg: {}'.format(open.sym,open.posi['ret_msg']))
             else:
                 log.log_and_show('{} Order Create Successfully !!'.format(open.sym))
+            log.show('')
             
             del open
             gc.collect()
