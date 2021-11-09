@@ -278,7 +278,7 @@ else:
         if i in Symbol_query['name'] and not i in cfg.Black_list:
             sym = Symbol_query['data'][Symbol_query['name'].index(i)]
             Symbol_List.append(Symbol(sym['name'], sym['price_filter']['tick_size'], sym['lot_size_filter']['qty_step']))
-            
+
     if cfg.Max_operate_position > len(Symbol_List):
         cfg.Max_operate_position = len(Symbol_List)
 
@@ -399,12 +399,7 @@ while True:
             if temp['ret_code']:
                 raise Exception('Query {} price Error\tReturn code: {}\tReturn msg: {}'.format(open.sym, temp['ret_code'], temp['ret_msg']))
             else:
-                if cfg.Trigger == 'LastPrice':
-                    open.price = (float)(temp['result'][0]['last_price'])
-                elif cfg.Trigger == 'MarkPrice':
-                    open.price = (float)(temp['result'][0]['mark_price'])
-                elif cfg.Trigger == 'IndexPrice':
-                    open.price = (float)(temp['result'][0]['index_price'])
+                open.price = (float)(temp['result'][0]['last_price'])
             
             # Calculate rough TP/SL and qty
             open.qty = qty_trim((cfg.operate_USDT * cfg.Leverage / open.price), Symbol_List[open.ID].qty_step)
