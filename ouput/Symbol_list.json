@@ -29,6 +29,7 @@
         "AXSUSDT",
         "LUNAUSDT",
         "SANDUSDT",
+        "MANAUSDT",
         "KSMUSDT",
         "ATOMUSDT",
         "AVAXUSDT",
@@ -47,11 +48,13 @@
         "DASHUSDT",
         "FTTUSDT",
         "BITUSDT",
+        "GALAUSDT",
         "CELRUSDT",
         "HBARUSDT",
         "ONEUSDT",
         "C98USDT",
-        "ALICEUSDT"
+        "ALICEUSDT",
+        "WOOUSDT"
     ],
     "data": [
         {
@@ -755,6 +758,31 @@
             }
         },
         {
+            "name": "MANAUSDT",
+            "alias": "MANAUSDT",
+            "status": "Trading",
+            "base_currency": "MANA",
+            "quote_currency": "USDT",
+            "price_scale": 4,
+            "taker_fee": "0.00075",
+            "maker_fee": "-0.00025",
+            "leverage_filter": {
+                "min_leverage": 1,
+                "max_leverage": 25,
+                "leverage_step": "0.01"
+            },
+            "price_filter": {
+                "min_price": "0.0005",
+                "max_price": "999.999",
+                "tick_size": "0.0005"
+            },
+            "lot_size_filter": {
+                "max_trading_qty": 20000,
+                "min_trading_qty": 0.1,
+                "qty_step": 0.1
+            }
+        },
+        {
             "name": "KSMUSDT",
             "alias": "KSMUSDT",
             "status": "Trading",
@@ -1205,6 +1233,31 @@
             }
         },
         {
+            "name": "GALAUSDT",
+            "alias": "GALAUSDT",
+            "status": "Trading",
+            "base_currency": "GALA",
+            "quote_currency": "USDT",
+            "price_scale": 5,
+            "taker_fee": "0.00075",
+            "maker_fee": "-0.00025",
+            "leverage_filter": {
+                "min_leverage": 1,
+                "max_leverage": 25,
+                "leverage_step": "0.01"
+            },
+            "price_filter": {
+                "min_price": "0.00001",
+                "max_price": "19.99998",
+                "tick_size": "0.00001"
+            },
+            "lot_size_filter": {
+                "max_trading_qty": 450000,
+                "min_trading_qty": 1,
+                "qty_step": 1
+            }
+        },
+        {
             "name": "CELRUSDT",
             "alias": "CELRUSDT",
             "status": "Trading",
@@ -1325,6 +1378,31 @@
             },
             "lot_size_filter": {
                 "max_trading_qty": 5000,
+                "min_trading_qty": 0.1,
+                "qty_step": 0.1
+            }
+        },
+        {
+            "name": "WOOUSDT",
+            "alias": "WOOUSDT",
+            "status": "Trading",
+            "base_currency": "WOO",
+            "quote_currency": "USDT",
+            "price_scale": 4,
+            "taker_fee": "0.00075",
+            "maker_fee": "-0.00025",
+            "leverage_filter": {
+                "min_leverage": 1,
+                "max_leverage": 25,
+                "leverage_step": "0.01"
+            },
+            "price_filter": {
+                "min_price": "0.0001",
+                "max_price": "199.9998",
+                "tick_size": "0.0001"
+            },
+            "lot_size_filter": {
+                "max_trading_qty": 10000,
                 "min_trading_qty": 0.1,
                 "qty_step": 0.1
             }

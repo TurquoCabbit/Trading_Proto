@@ -1,14 +1,20 @@
 {
-    "Version": "1.01",
+    "Version": "2.00",
     "Run_on_testnet": true,
-    "Operate_position": 10,
-    "Order_value_USDT": 10,
+    "Operate_position": 25,
+    "Order_value_USDT": 25,
     "Leverage": 20,
-    "TP_percentage": 60,
-    "SL_percentage": 8,
+    "TP_percentage": 80,
+    "SL_percentage": 20,
+    "Trigger": "MarkPrice",
+    "Trailing_Stop_percentag": 0,
     "Favorite_group": "all",
     "open_interval": 1,
     "poll_interval": 60,
+    "Black_list" : [
+        "BCH",
+        "OMG"
+    ],
     "Group_0": [
         "BTC",
         "ETH",
