@@ -65,8 +65,9 @@ class CFG:
         self.Trailing_Stop = 0
         self.Group = 'all'
         self.open_order_interval = 1
-        self.poll_order_interval = 60        
+        self.poll_order_interval = 60
         self.Token_list = ['BTC', 'ETH']
+        self.Black_list = []
 
     
     def make_cfg(self):
@@ -83,6 +84,7 @@ class CFG:
                             'Favorite_group' : 'all',
                             'open_interval' : 1,
                             'poll_interval' : 60,
+                            'Black_list' : [],
                             'Group_0' : [
                                 'BTC',  'ETH',  'DOT',  'SOL',
                                 'BNB',  'FTT',  'UNI',  'AXS',
@@ -115,8 +117,12 @@ class CFG:
             self.Group = self.cfg['Favorite_group']
             self.open_order_interval = self.cfg['open_interval']
             self.poll_order_interval = self.cfg['poll_interval']
+            self.Black_list.clear()
+            for i in self.cfg['Black_list']:
+                self.Black_list.append('{}USDT'.format(i))
+
             self.Token_list.clear()
-            if self.Group in self.cfg:
+            if self.Group in self.cfg and self.Group != 'Black_list':
                 for i in self.cfg[self.Group]:
                     self.Token_list.append('{}USDT'.format(i))
             else:
@@ -215,10 +221,6 @@ if not cfg.load_cfg():
         cfg.update_version()
 
 ### Check parameter
-
-if cfg.Group != 'all' and cfg.Max_operate_position > len(cfg.Token_list):
-    cfg.Max_operate_position = len(cfg.Token_list)
-
 if cfg.open_order_interval < 1:
     cfg.open_order_interval = 1
     
@@ -269,12 +271,16 @@ except Exception as Err:
 ### Check Sym list
 if cfg.Group == 'all':
     for i in Symbol_query['data']:
-        Symbol_List.append(Symbol(i['name'], i['price_filter']['tick_size'], i['lot_size_filter']['qty_step']))
+        if not i['name'] in cfg.Black_list:
+            Symbol_List.append(Symbol(i['name'], i['price_filter']['tick_size'], i['lot_size_filter']['qty_step']))
 else:
     for i in cfg.Token_list:
-        if i in Symbol_query['name']:
+        if i in Symbol_query['name'] and not i in cfg.Black_list:
             sym = Symbol_query['data'][Symbol_query['name'].index(i)]
             Symbol_List.append(Symbol(sym['name'], sym['price_filter']['tick_size'], sym['lot_size_filter']['qty_step']))
+            
+    if cfg.Max_operate_position > len(Symbol_List):
+        cfg.Max_operate_position = len(Symbol_List)
 
 while True:
     log.log_and_show(log.get_run_time(Start_time))
