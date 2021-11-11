@@ -99,4 +99,4 @@ def get_error_msg(EC):
     try:
         return code[(str)(EC)]
     except KeyError:
-        return False
+        return None
