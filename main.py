@@ -16,8 +16,8 @@ import Loading_animation
 
 
 ##########################################################
-Version = '2.00'
-Date = '2021/11/09'
+Version = '3.00'
+Date = '2021/11/11'
 
 Start_time = (int)(time())
 
@@ -59,6 +59,7 @@ class CFG:
         self.Max_operate_position = 5
         self.operate_USDT = 10
         self.Leverage = 20
+        self.side = 'Both'
         self.TP_percentage = 100
         self.SL_percentage = 10
         self.Trigger = 'LastPrice'
@@ -68,15 +69,14 @@ class CFG:
         self.poll_order_interval = 60
         self.Token_list = ['BTC', 'ETH']
         self.Black_list = []
-
-    
-    def make_cfg(self):
+        
         self.cfg_init = {
                             'Version' : Version,
                             'Run_on_testnet' : True,
                             'Operate_position' : 5,
                             'Order_value_USDT' : 10,
                             'Leverage' : 20,
+                            'Side' : 'Both',
                             'TP_percentage' : 100,
                             'SL_percentage' : 10,
                             'Trigger' : 'LastPrice',
@@ -92,10 +92,11 @@ class CFG:
                                 'BIT',  'ADA',  'ICP'
                                 ]
                         }
+
+    
+    def new_cfg(self):
         with open('cfg.json', 'w') as file:
             json.dump(self.cfg_init, file, indent = 4)
-        del self.cfg_init
-        gc.collect()
 
     def load_cfg(self):
         with open('cfg.json', 'r') as file:
@@ -109,6 +110,7 @@ class CFG:
             self.Max_operate_position = self.cfg['Operate_position']
             self.operate_USDT = self.cfg['Order_value_USDT']
             self.Leverage = self.cfg['Leverage']
+            self.side = self.cfg['Side']
             self.TP_percentage = self.cfg['TP_percentage']
             self.SL_percentage = self.cfg['SL_percentage']
             self.Trigger = self.cfg['Trigger']
@@ -137,14 +139,30 @@ class CFG:
         self.cfg['Version'] = self.version
         with open('cfg.json', 'w') as file:
             json.dump(self.cfg, file, indent = 4)
-
-    def archive_cfg(self, msg):
-        System_Msg(msg)
-        log.log_and_show('Generate new cfg.json')
+    
+    def upgrade_cfg(self):
+        System_Msg('cfg.json upgraded, archive as cfg_{}.json'.format(strftime('%Y%m%d-%H;%M;%S', localtime(os.path.getmtime('cfg.json')))))
         if not os.path.isdir('archive'):
             os.mkdir('archive')
         os.rename('cfg.json', 'archive/cfg_{}.json'.format(strftime('%Y%m%d-%H;%M;%S', localtime(os.path.getmtime('cfg.json')))))
-        self.make_cfg()
+
+        for i in self.cfg_init:
+            if not i in self.cfg:
+                self.cfg[i] = self.cfg_init[i]
+
+        self.update_version()
+
+        log.log_and_show('Upgrade cfg.json')
+        os.system('pause')
+        os._exit(0)
+
+    def archive_cfg(self, msg):
+        System_Msg(msg)
+        if not os.path.isdir('archive'):
+            os.mkdir('archive')
+        os.rename('cfg.json', 'archive/cfg_{}.json'.format(strftime('%Y%m%d-%H;%M;%S', localtime(os.path.getmtime('cfg.json')))))
+        self.new_cfg()
+        log.log_and_show('Generate new cfg.json')
         os.system('pause')
         os._exit(0)
 
@@ -183,7 +201,6 @@ def rand_side():
     else:
         return "Sell"
         
-
 def qty_trim(qty, step):
     digi = abs((int)(format(step, '1E').split('E')[1]))
     qty = (int)(qty * pow(10, digi))
@@ -208,13 +225,13 @@ cfg = CFG(Version)
 
 if not os.path.isfile('cfg.json'):
     System_Msg('cfg.json file missing. Generate a new one')
-    cfg.make_cfg()
+    cfg.new_cfg()
     os.system('pause')
 
 if not cfg.load_cfg():
     if (int)(cfg.version.split('.')[0]) != (int)(Version.split('.')[0]):
         # Main version different
-        cfg.archive_cfg('cfg.json main version defferent, archive as cfg_{}.json'.format(strftime('%Y%m%d-%H;%M;%S', localtime(os.path.getmtime('cfg.json')))))
+        cfg.upgrade_cfg()
 
     elif (int)(cfg.version.split('.')[1]) < (int)(Version.split('.')[1]):
         #Sub version different
@@ -226,6 +243,9 @@ if cfg.open_order_interval < 1:
     
 if cfg.poll_order_interval < 10:
     cfg.poll_order_interval = 10
+
+if cfg.side != 'Buy' and cfg.side != 'Sell':
+    cfg.side = 'Both'
 
 if cfg.Trigger != 'MarkPrice' and cfg.Trigger != 'LastPrice' and cfg.Trigger != 'IndexPrice':
     cfg.Trigger = 'LastPrice'
@@ -369,7 +389,10 @@ while True:
             # Random pick
             open.ID = rand_symbol()
             open.sym = Symbol_List[open.ID].symbol
-            open.side = rand_side()
+            if cfg.side == 'Both':
+                open.side = rand_side()
+            else:
+                open.side = cfg.side
 
             # Set Full Position TP/SL
             if Symbol_List[open.ID].tpsl_mode != 'Full':
