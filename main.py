@@ -1,3 +1,4 @@
+from types import coroutine
 from pybit import HTTP
 from time import localtime
 from time import strftime
@@ -13,10 +14,10 @@ random.seed()
 import Make_log
 import Update_Symbol_List
 import Loading_animation
-
+from error_code import get_error_msg
 
 ##########################################################
-Version = '3.00'
+Version = '3.01'
 Date = '2021/11/11'
 
 Start_time = (int)(time())
@@ -28,6 +29,7 @@ delay = Loading_animation.delay_anima()
 ##############################################################################################################################
 ### init log
 log = Make_log.Log('log')
+log.log_and_show('')
 log.log_and_show('Bybit USDT perpetual trading bot ver {} {}'.format(Version, Date))
 log.log_and_show('========================START=========================')
 
@@ -166,22 +168,22 @@ class CFG:
         os.system('pause')
         os._exit(0)
 
-
-
-def Error_Msg(str, extreme = 0):
-    log.log(str)
+def Error_Msg(str = ''):
     time = datetime.now()
-    if extreme:
-        os.system('echo [41m{} : {}'.format(time.strftime('%H:%M:%S'), str))
-        os.system('echo [0m{} :'.format(time.strftime('%H:%M:%S')))
-    else:
-        os.system('echo [31m{} : {}'.format(time.strftime('%H:%M:%S'), str))
-        os.system('echo [0m{} :'.format(time.strftime('%H:%M:%S')))
+    str = str.split('\n')
 
-def System_Msg(str):
-    log.log(str)
+    for i in str:
+        log.log(i)
+        os.system('echo [31m{} : {}'.format(time.strftime('%H:%M:%S'), i))        
+    os.system('echo [0m{} :'.format(time.strftime('%H:%M:%S')))
+
+def System_Msg(str = ''):
     time = datetime.now()
-    os.system('echo [33m{} : {}'.format(time.strftime('%H:%M:%S'), str))
+    str = str.split('\n')
+
+    for i in str:
+        log.log(i)
+        os.system('echo [33m{} : {}'.format(time.strftime('%H:%M:%S'), i))
     os.system('echo [0m{} :'.format(time.strftime('%H:%M:%S')))
 
 def Print_and_pause(str = ''):
@@ -266,25 +268,19 @@ else:
                 Symbol_query = json.load(file)
 
 ##############################################################################################################################
-### Connect client
-try:
-    if len(sys.argv) == 3:
-        if cfg.Test_net:
-            # main net api and serect were passed
-            log.log_and_show('Operate on Test Net !!!')
-            client = HTTP('https://api-testnet.bybit.com', api_key=sys.argv[1], api_secret=sys.argv[2])
-        else:
-            # main net api and serect were passed
-            log.log_and_show('Operate on Main Net !!!')
-            client = HTTP('https://api.bybit.com', api_key=sys.argv[1], api_secret=sys.argv[2])
+### Create client
+if len(sys.argv) == 3:
+    if cfg.Test_net:
+        # main net api and serect were passed
+        log.log_and_show('Operate on Test Net !!!')
+        client = HTTP('https://api-testnet.bybit.com', api_key=sys.argv[1], api_secret=sys.argv[2])
     else:
-        log.log_and_show('Execution cmd :')
-        log.log_and_show('main.exe <api key> <api secret>')
-        os.system('pause')
-        os._exit(0)
-    
-except Exception as Err:
-    Error_Msg(Err)
+        # main net api and serect were passed
+        log.log_and_show('Operate on Main Net !!!')
+        client = HTTP('https://api.bybit.com', api_key=sys.argv[1], api_secret=sys.argv[2])
+else:
+    log.show('Execution cmd :')
+    log.show('main.exe <api key> <api secret>')
     os.system('pause')
     os._exit(0)
 
@@ -299,23 +295,33 @@ else:
             sym = Symbol_query['data'][Symbol_query['name'].index(i)]
             Symbol_List.append(Symbol(sym['name'], sym['price_filter']['tick_size'], sym['lot_size_filter']['qty_step']))
 
-    if cfg.Max_operate_position > len(Symbol_List):
-        cfg.Max_operate_position = len(Symbol_List)
 
 while True:
     log.log_and_show(log.get_run_time(Start_time))
+
+    ### Check if eligible symbol qty exceed max operated qty
+    if cfg.Max_operate_position > len(Symbol_List):
+        cfg.Max_operate_position = len(Symbol_List)
     
     try:
         ### Query current wallet balance
-        wallet = client.get_wallet_balance(coin="USDT")
-        if not wallet['ret_code']:
+        try:
+            wallet = client.get_wallet_balance(coin = "USDT")
             wallet_available = wallet['result']['USDT']['available_balance']
             wallet_equity = wallet['result']['USDT']['equity']
             log.show('')
             log.log_and_show('Balance available:\t{:.2f}\tUSDT'.format(wallet_available))
             log.log_and_show('Balance equity:\t{:.2f}\tUSDT'.format(wallet_equity))
-        else:
-            raise Exception('Query Wallet Fail !!\tReturn code: {}\tReturn msg: {}'.format(wallet['ret_code'], wallet['ret_msg']))
+        except Exception as err:
+            err = str(err)
+            ret_code = err.split('(ErrCode: ')[1].split(')')[0]
+            ret_note = err.split('(ErrCode: ')[0]
+            Error_Msg('Get wallet balance Fail!!\n#{} : {}\n{}'.format(ret_code, get_error_msg(ret_code), ret_note))
+            match ret_code:
+                case _:
+                    continue
+
+
 
 
         ### Query current position
@@ -325,7 +331,18 @@ while True:
         Position_List = {'symbol' : [], 'Buy' : [], 'Sell' : []}
         opened_order = []
 
-        position = client.my_position(endpoint = '/private/linear/position/list')
+        try:
+            position = client.my_position(endpoint = '/private/linear/position/list')
+        except Exception as err:
+            err = str(err)
+            ret_code = err.split('(ErrCode: ')[1].split(')')[0]
+            ret_note = err.split('(ErrCode: ')[0]
+            Error_Msg('Query Position Fail!!\n#{} : {}\n{}'.format(ret_code, get_error_msg(ret_code), ret_note))
+            match ret_code:
+                case _:
+                    os.system('pause')
+                    os._exit(0)
+                    
         if not position['ret_code']:
             for i in position['result']:
                 if i['is_valid']:
@@ -335,11 +352,9 @@ while True:
                     else:
                         Position_List['Sell'].append(i['data'])
                 else:
-                    raise Exception('Query Position data NOT valid')
-        else:
-            raise Exception('Query Position Fail !!\tReturn code: {}\tReturn msg: {}'.format(position['ret_code'], position['ret_msg']))
+                    Error_Msg('{} position data NOT valid'.format(i['data']['symbol']))
         
-
+        ### Chek position status
         for i in Symbol_List:
             if i.symbol in Position_List['symbol']:
                 index = Position_List['symbol'].index(i.symbol)
@@ -372,7 +387,7 @@ while True:
                     i.opened = False
         
         log.show('')
-        log.log_and_show('Opened Position: {}\tBuy :{} Sell :{}'.format(current_position_qty, current_position_buy, current_position_sel))
+        log.log_and_show('Opened Position: {}\tBuy: {} Sell: {}'.format(current_position_qty, current_position_buy, current_position_sel))
         for i in opened_order:
             log.show('\t{}'.format(i))
         
@@ -396,34 +411,69 @@ while True:
 
             # Set Full Position TP/SL
             if Symbol_List[open.ID].tpsl_mode != 'Full':
-                temp = client.full_partial_position_tp_sl_switch(symbol = open.sym, tp_sl_mode = 'Full')
-                if temp['ret_code'] == 0:
-                    raise Exception('Set {} Full Position TP/SL Error\tReturn code: {}\tReturn msg: {}'.format(open.sym, temp['ret_code'], temp['ret_msg']))
-                Symbol_List[open.ID].tpsl_mode = 'Full'
+                try:
+                    temp = client.full_partial_position_tp_sl_switch(symbol = open.sym, tp_sl_mode = 'Full')
+                    Symbol_List[open.ID].tpsl_mode = 'Full'
+                except Exception as err:
+                    err = str(err)
+                    ret_code = err.split('(ErrCode: ')[1].split(')')[0]
+                    ret_note = err.split('(ErrCode: ')[0]
+                    Error_Msg('Set {} TPSL mode Fail!!\n#{} : {}\n{}'.format(open.sym, ret_code, get_error_msg(ret_code), ret_note))
+                    match ret_code:
+                        case _:
+                            Symbol_List.pop(open.ID)
+                            System_Msg('Remove {} from Symbol List'. format(open.sym))
+                            continue
 
             # Switch to isolated margin mode and set leverage
             if Symbol_List[open.ID].isolate != True:
-                temp = client.cross_isolated_margin_switch(symbol = open.sym, is_isolated = True,\
-                                                           buy_leverage = cfg.Leverage, sell_leverage = cfg.Leverage)
-                if temp['ret_code']:
-                    raise Exception('Set {} Margin mode Error\tReturn code: {}\tReturn msg: {}'.format(open.sym, temp['ret_code'], temp['ret_msg']))
-                Symbol_List[open.ID].isolate = True
-                Symbol_List[open.ID].leverage = cfg.Leverage
+                try:
+                    temp = client.cross_isolated_margin_switch(symbol = open.sym, is_isolated = True,\
+                                                               buy_leverage = cfg.Leverage, sell_leverage = cfg.Leverage)
+                    Symbol_List[open.ID].isolate = True
+                    Symbol_List[open.ID].leverage = cfg.Leverage
+                except Exception as err:
+                    err = str(err)
+                    ret_code = err.split('(ErrCode: ')[1].split(')')[0]
+                    ret_note = err.split('(ErrCode: ')[0]
+                    Error_Msg('Set {} margin mode Fail!!\n#{} : {}\n{}'.format(open.sym, ret_code, get_error_msg(ret_code), ret_note))
+                    match ret_code:
+                        case _:
+                            Symbol_List.pop(open.ID)
+                            System_Msg('Remove {} from Symbol List'. format(open.sym))
+                            continue
 
             # Modify leverage
             if Symbol_List[open.ID].leverage != cfg.Leverage:
-                temp = client.set_leverage(symbol = open.sym, buy_leverage = cfg.Leverage, sell_leverage = cfg.Leverage)
-                if temp['ret_code']:
-                    raise Exception('Set {} Leverage Error\tReturn code: {}\tReturn msg: {}'.format(open.sym, temp['ret_code'], temp['ret_msg']))
-                Symbol_List[open.ID].leverage = cfg.Leverage
+                try:
+                    temp = client.set_leverage(symbol = open.sym, buy_leverage = cfg.Leverage, sell_leverage = cfg.Leverage)
+                    Symbol_List[open.ID].leverage = cfg.Leverage
+                except Exception as err:
+                    err = str(err)
+                    ret_code = err.split('(ErrCode: ')[1].split(')')[0]
+                    ret_note = err.split('(ErrCode: ')[0]
+                    Error_Msg('Set {} leverage Fail!!\n#{} : {}\n{}'.format(open.sym, ret_code, get_error_msg(ret_code), ret_note))
+                    match ret_code:
+                        case _:
+                            Symbol_List.pop(open.ID)
+                            System_Msg('Remove {} from Symbol List'. format(open.sym))
+                            continue
 
             # Query price
-            temp = client.latest_information_for_symbol(symbol = open.sym)
-            if temp['ret_code']:
-                raise Exception('Query {} price Error\tReturn code: {}\tReturn msg: {}'.format(open.sym, temp['ret_code'], temp['ret_msg']))
-            else:
+            try:
+                temp = client.latest_information_for_symbol(symbol = open.sym)
                 open.price = (float)(temp['result'][0]['last_price'])
-            
+            except Exception as err:
+                err = str(err)
+                ret_code = err.split('(ErrCode: ')[1].split(')')[0]
+                ret_note = err.split('(ErrCode: ')[0]
+                Error_Msg('Get {} price Fail!!\n#{} : {}\n{}'.format(open.sym, ret_code, get_error_msg(ret_code), ret_note))
+                match ret_code:
+                    case _:
+                        Symbol_List.pop(open.ID)
+                        System_Msg('Remove {} from Symbol List'. format(open.sym))
+                        continue
+
             # Calculate rough TP/SL and qty
             open.qty = qty_trim((cfg.operate_USDT * cfg.Leverage / open.price), Symbol_List[open.ID].qty_step)
             if open.side == 'Buy':
@@ -435,41 +485,46 @@ while True:
             
             log.log_and_show('Opening {} {} {} order at about {}'.format(open.qty, open.sym, open.side, open.price))
 
-            # Open position
-            open.posi = client.place_active_order(
-                                                    symbol = open.sym,\
-                                                    side = open.side,\
-                                                    order_type = "Market",\
-                                                    qty = open.qty,\
-                                                    time_in_force = "GoodTillCancel",\
-                                                    reduce_only = False,\
-                                                    close_on_trigger = False,\
-                                                    take_profit = open.TP,\
-                                                    stop_loss = open.SL
-                                                )
-
-            if open.posi['ret_code'] != 0:
-                raise Exception('{} Order Create Fail !!\tReturn code: {}\tReturn msg: {}'.format(open.sym, open.posi['ret_code'], open.posi['ret_msg']))
-            elif open.posi['ret_msg'] != 'OK':
-                log.log_and_show('{} Order Create Successfully !!\tReturn msg: {}'.format(open.sym,open.posi['ret_msg']))
-            else:
-                log.log_and_show('{} Order Create Successfully !!'.format(open.sym))
-            
-            retry = 10
-            while retry:
-                delay.delay(0.2)            
-                #Get entry price
-                temp = client.my_position(symbol = open.sym)
-                if temp['ret_code']:
-                    raise Exception('Query position entry Error\tReturn code: {}\tReturn msg: {}'.format(open.sym, temp['ret_code'], temp['ret_msg']))
+            # Open order
+            try:
+                open.posi = client.place_active_order(
+                                                        symbol = open.sym,\
+                                                        side = open.side,\
+                                                        order_type = "Market",\
+                                                        qty = open.qty,\
+                                                        time_in_force = "GoodTillCancel",\
+                                                        reduce_only = False,\
+                                                        close_on_trigger = False,\
+                                                        take_profit = open.TP,\
+                                                        stop_loss = open.SL
+                                                    )
+                if open.posi['ret_msg'] != 'OK':
+                    System_Msg('{} Order Create Successfully !!\nwith return msg: {}'.format(open.sym,open.posi['ret_msg']))
                 else:
+                    log.log_and_show('{} Order Create Successfully !!'.format(open.sym))
+            except Exception as err:
+                err = str(err)
+                ret_code = err.split('(ErrCode: ')[1].split(')')[0]
+                ret_note = err.split('(ErrCode: ')[0]
+                Error_Msg('Open {} order Fail!!\n#{} : {}\n{}'.format(open.sym, ret_code, get_error_msg(ret_code), ret_note))
+                match ret_code:
+                    case _:
+                        Symbol_List.pop(open.ID)
+                        System_Msg('Remove {} from Symbol List'. format(open.sym))
+                        continue
+
+            try:
+                retry = 3
+                while retry:
+                    #Get entry price                    
+                    temp = client.my_position(symbol = open.sym)
                     if open.side == 'Buy':
                         if temp['result'][0]['size'] > 0:
-                            open.price = (float)(temp['result'][0]['entry_price'])
-                            # Calculate new TP/SL
-                            open.TP = price_trim((1 + (cfg.TP_percentage / cfg.Leverage / 100)) * open.price, Symbol_List[open.ID].tick_size)
-                            open.SL = price_trim((1 - (cfg.SL_percentage / cfg.Leverage / 100)) * open.price, Symbol_List[open.ID].tick_size, True)
-                            break
+                                open.price = (float)(temp['result'][0]['entry_price'])
+                                # Calculate new TP/SL
+                                open.TP = price_trim((1 + (cfg.TP_percentage / cfg.Leverage / 100)) * open.price, Symbol_List[open.ID].tick_size)
+                                open.SL = price_trim((1 - (cfg.SL_percentage / cfg.Leverage / 100)) * open.price, Symbol_List[open.ID].tick_size, True)
+                                break
                     elif open.side == 'Sell':
                         if temp['result'][1]['size'] > 0:
                             open.price = (float)(temp['result'][1]['entry_price'])
@@ -477,23 +532,45 @@ while True:
                             open.TP = price_trim((1 - (cfg.TP_percentage / cfg.Leverage / 100)) * open.price, Symbol_List[open.ID].tick_size)
                             open.SL = price_trim((1 + (cfg.SL_percentage / cfg.Leverage / 100)) * open.price, Symbol_List[open.ID].tick_size, True)
                             break
-                retry -= 1
+                    delay.delay(0.2)
+                    retry -= 1
+
+                if not retry:
+                    Error_Msg('Get {} position entry retry Fail!!'.format(open.sym))
+                    continue
+            except Exception as err:
+                err = str(err)
+                ret_code = err.split('(ErrCode: ')[1].split(')')[0]
+                ret_note = err.split('(ErrCode: ')[0]
+                Error_Msg('Get {} position entry price Fail!!\n#{} : {}\n{}'.format(open.sym, ret_code, get_error_msg(ret_code), ret_note))
+                match ret_code:
+                    case _:
+                        continue
+
             
             # Calculate Trailing price
-            if cfg.Trailing_Stop != 0:
-                open.trailing = price_trim(open.price * (cfg.Trailing_Stop / cfg.Leverage / 100), Symbol_List[open.ID].tick_size)
+            try:
+                if cfg.Trailing_Stop != 0:
+                    open.trailing = price_trim(open.price * (cfg.Trailing_Stop / cfg.Leverage / 100), Symbol_List[open.ID].tick_size)
 
-                # Set trailing stop
-                temp = client.set_trading_stop(symbol = open.sym, side = open.side, trailing_stop = open.trailing,\
-                                               take_profit = open.TP, stop_loss = open.SL,\
-                                               tp_trigger_by = cfg.Trigger, sl_trigger_by = cfg.Trigger)
-            else:
-                temp = client.set_trading_stop(symbol = open.sym, side = open.side,\
-                                               take_profit = open.TP, stop_loss = open.SL,\
-                                               tp_trigger_by = cfg.Trigger, sl_trigger_by = cfg.Trigger)
-            if temp['ret_code']:
-                raise Exception('Set {} {} trailing stop and fix TPSL Error\tReturn code: {}\tReturn msg: {}'.format(open.sym, open.side, temp['ret_code'], temp['ret_msg']))
-            
+                    # Set trailing stop
+                    temp = client.set_trading_stop(symbol = open.sym, side = open.side, trailing_stop = open.trailing,\
+                                                take_profit = open.TP, stop_loss = open.SL,\
+                                                tp_trigger_by = cfg.Trigger, sl_trigger_by = cfg.Trigger)
+                else:
+                    # fine tune TPSL
+                    temp = client.set_trading_stop(symbol = open.sym, side = open.side,\
+                                                take_profit = open.TP, stop_loss = open.SL,\
+                                                tp_trigger_by = cfg.Trigger, sl_trigger_by = cfg.Trigger)
+            except Exception as err:
+                err = str(err)
+                ret_code = err.split('(ErrCode: ')[1].split(')')[0]
+                ret_note = err.split('(ErrCode: ')[0]
+                Error_Msg('Set {} trailing and fine tune TPSL Fail!!\n#{} : {}\n{}'.format(open.sym, ret_code, get_error_msg(ret_code), ret_note))
+                match ret_code:
+                    case _:
+                        continue
+                        
             log.log_and_show('Entry pirce : {}'.format(open.price))
             if cfg.Trailing_Stop != 0:
                 log.log_and_show('TP : {},  SL : {},  Trailing stop : {}'.format(open.TP, open.SL, open.trailing))
@@ -509,6 +586,6 @@ while True:
 
 
     except Exception as Err:
-        Error_Msg(Err)
+        log.log(Err)
         os.system('pause')
         os._exit(0)
