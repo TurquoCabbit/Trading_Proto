@@ -17,8 +17,8 @@ import Loading_animation
 from error_code import get_error_msg
 
 ##########################################################
-Version = '3.01'
-Date = '2021/11/11'
+Version = '3.02'
+Date = '2021/11/12'
 
 Start_time = (int)(time())
 
