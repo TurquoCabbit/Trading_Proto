@@ -319,6 +319,7 @@ while True:
             Error_Msg('Get wallet balance Fail!!\n#{} : {}\n{}'.format(ret_code, get_error_msg(ret_code), ret_note))
             match ret_code:
                 case _:
+                    log.log('untrack_error_code')
                     continue
 
 
@@ -340,6 +341,7 @@ while True:
             Error_Msg('Query Position Fail!!\n#{} : {}\n{}'.format(ret_code, get_error_msg(ret_code), ret_note))
             match ret_code:
                 case _:
+                    log.log('untrack_error_code')
                     os.system('pause')
                     os._exit(0)
                     
@@ -421,6 +423,7 @@ while True:
                     Error_Msg('Set {} TPSL mode Fail!!\n#{} : {}\n{}'.format(open.sym, ret_code, get_error_msg(ret_code), ret_note))
                     match ret_code:
                         case _:
+                            log.log('untrack_error_code')
                             Symbol_List.pop(open.ID)
                             System_Msg('Remove {} from Symbol List'. format(open.sym))
                             continue
@@ -439,6 +442,7 @@ while True:
                     Error_Msg('Set {} margin mode Fail!!\n#{} : {}\n{}'.format(open.sym, ret_code, get_error_msg(ret_code), ret_note))
                     match ret_code:
                         case _:
+                            log.log('untrack_error_code')
                             Symbol_List.pop(open.ID)
                             System_Msg('Remove {} from Symbol List'. format(open.sym))
                             continue
@@ -455,6 +459,7 @@ while True:
                     Error_Msg('Set {} leverage Fail!!\n#{} : {}\n{}'.format(open.sym, ret_code, get_error_msg(ret_code), ret_note))
                     match ret_code:
                         case _:
+                            log.log('untrack_error_code')
                             Symbol_List.pop(open.ID)
                             System_Msg('Remove {} from Symbol List'. format(open.sym))
                             continue
@@ -470,6 +475,7 @@ while True:
                 Error_Msg('Get {} price Fail!!\n#{} : {}\n{}'.format(open.sym, ret_code, get_error_msg(ret_code), ret_note))
                 match ret_code:
                     case _:
+                        log.log('untrack_error_code')
                         Symbol_List.pop(open.ID)
                         System_Msg('Remove {} from Symbol List'. format(open.sym))
                         continue
@@ -504,11 +510,17 @@ while True:
                     log.log_and_show('{} Order Create Successfully !!'.format(open.sym))
             except Exception as err:
                 err = str(err)
+                log.log(err)
                 ret_code = err.split('(ErrCode: ')[1].split(')')[0]
                 ret_note = err.split('(ErrCode: ')[0]
                 Error_Msg('Open {} order Fail!!\n#{} : {}\n{}'.format(open.sym, ret_code, get_error_msg(ret_code), ret_note))
                 match ret_code:
+                    case '130023':
+                        Symbol_List.pop(open.ID)
+                        System_Msg('Remove {} from Symbol List'. format(open.sym))
+                        continue
                     case _:
+                        log.log('untrack_error_code')
                         Symbol_List.pop(open.ID)
                         System_Msg('Remove {} from Symbol List'. format(open.sym))
                         continue
@@ -545,6 +557,7 @@ while True:
                 Error_Msg('Get {} position entry price Fail!!\n#{} : {}\n{}'.format(open.sym, ret_code, get_error_msg(ret_code), ret_note))
                 match ret_code:
                     case _:
+                        log.log('untrack_error_code')
                         continue
 
             
@@ -569,6 +582,7 @@ while True:
                 Error_Msg('Set {} trailing and fine tune TPSL Fail!!\n#{} : {}\n{}'.format(open.sym, ret_code, get_error_msg(ret_code), ret_note))
                 match ret_code:
                     case _:
+                        log.log('untrack_error_code')
                         continue
                         
             log.log_and_show('Entry pirce : {}'.format(open.price))
