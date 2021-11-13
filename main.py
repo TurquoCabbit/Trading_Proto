@@ -386,15 +386,15 @@ else:
             Symbol_List.append(Symbol(sym['name'], sym['price_filter']['tick_size'], sym['lot_size_filter']['qty_step']))
 
 
-while True:
-    log.log_and_show(log.get_run_time(Start_time))
-
-    ### Check if eligible symbol qty exceed max operated qty
-    if cfg.Max_operate_position > len(Symbol_List):
-        System_Msg('Decrease Operate_position form {} to {}'.format(cfg.Max_operate_position, len(Symbol_List)))
-        cfg.Max_operate_position = len(Symbol_List)
-        
+while True:        
     try:
+        log.log_and_show(log.get_run_time(Start_time))
+
+        ### Check if eligible symbol qty exceed max operated qty
+        if cfg.Max_operate_position > len(Symbol_List):
+            System_Msg('Decrease Operate_position form {} to {}'.format(cfg.Max_operate_position, len(Symbol_List)))
+            cfg.Max_operate_position = len(Symbol_List)
+
         ### Query current wallet balance
         try:
             wallet = client.get_wallet_balance(coin = "USDT")
@@ -545,123 +545,123 @@ while True:
         
         ### Randonly open position
         if current_position_qty < cfg.Max_operate_position:
-            open = Open()
+            order = Open()
 
             # Random pick
-            open.ID = rand_symbol()
-            open.sym = Symbol_List[open.ID].symbol
+            order.ID = rand_symbol()
+            order.sym = Symbol_List[order.ID].symbol
             if cfg.side == 'Both':
-                open.side = rand_side()
+                order.side = rand_side()
             else:
-                open.side = cfg.side
+                order.side = cfg.side
 
             # Set Full Position TP/SL
-            if Symbol_List[open.ID].tpsl_mode != 'Full':
+            if Symbol_List[order.ID].tpsl_mode != 'Full':
                 try:
-                    temp = client.full_partial_position_tp_sl_switch(symbol = open.sym, tp_sl_mode = 'Full')
-                    Symbol_List[open.ID].tpsl_mode = 'Full'
+                    temp = client.full_partial_position_tp_sl_switch(symbol = order.sym, tp_sl_mode = 'Full')
+                    Symbol_List[order.ID].tpsl_mode = 'Full'
                 except Exception as err:
                     err = str(err)
                     if not err.endswith('}.'):
                         raise Exception(err)
                     ret_code = err.split('(ErrCode: ')[1].split(')')[0]
                     ret_note = err.split('(ErrCode: ')[0]
-                    Error_Msg('Set {} TPSL mode Fail!!\n#{} : {}\n{}'.format(open.sym, ret_code, get_error_msg(ret_code), ret_note))
+                    Error_Msg('Set {} TPSL mode Fail!!\n#{} : {}\n{}'.format(order.sym, ret_code, get_error_msg(ret_code), ret_note))
                     match ret_code:
                         case _:
                             log.log('untrack_error_code')
-                            Symbol_List.pop(open.ID)
-                            System_Msg('Remove {} from Symbol List'. format(open.sym))
+                            Symbol_List.pop(order.ID)
+                            System_Msg('Remove {} from Symbol List'. format(order.sym))
                             continue
 
             # Switch to isolated margin mode and set leverage
-            if Symbol_List[open.ID].isolate != True:
+            if Symbol_List[order.ID].isolate != True:
                 try:
-                    temp = client.cross_isolated_margin_switch(symbol = open.sym, is_isolated = True,\
+                    temp = client.cross_isolated_margin_switch(symbol = order.sym, is_isolated = True,\
                                                                buy_leverage = cfg.Leverage, sell_leverage = cfg.Leverage)
-                    Symbol_List[open.ID].isolate = True
-                    Symbol_List[open.ID].leverage = cfg.Leverage
+                    Symbol_List[order.ID].isolate = True
+                    Symbol_List[order.ID].leverage = cfg.Leverage
                 except Exception as err:
                     err = str(err)
                     if not err.endswith('}.'):
                         raise Exception(err)
                     ret_code = err.split('(ErrCode: ')[1].split(')')[0]
                     ret_note = err.split('(ErrCode: ')[0]
-                    Error_Msg('Set {} margin mode Fail!!\n#{} : {}\n{}'.format(open.sym, ret_code, get_error_msg(ret_code), ret_note))
+                    Error_Msg('Set {} margin mode Fail!!\n#{} : {}\n{}'.format(order.sym, ret_code, get_error_msg(ret_code), ret_note))
                     match ret_code:
                         case _:
                             log.log('untrack_error_code')
-                            Symbol_List.pop(open.ID)
-                            System_Msg('Remove {} from Symbol List'. format(open.sym))
+                            Symbol_List.pop(order.ID)
+                            System_Msg('Remove {} from Symbol List'. format(order.sym))
                             continue
 
             # Modify leverage
-            if Symbol_List[open.ID].leverage != cfg.Leverage:
+            if Symbol_List[order.ID].leverage != cfg.Leverage:
                 try:
-                    temp = client.set_leverage(symbol = open.sym, buy_leverage = cfg.Leverage, sell_leverage = cfg.Leverage)
-                    Symbol_List[open.ID].leverage = cfg.Leverage
+                    temp = client.set_leverage(symbol = order.sym, buy_leverage = cfg.Leverage, sell_leverage = cfg.Leverage)
+                    Symbol_List[order.ID].leverage = cfg.Leverage
                 except Exception as err:
                     err = str(err)
                     if not err.endswith('}.'):
                         raise Exception(err)
                     ret_code = err.split('(ErrCode: ')[1].split(')')[0]
                     ret_note = err.split('(ErrCode: ')[0]
-                    Error_Msg('Set {} leverage Fail!!\n#{} : {}\n{}'.format(open.sym, ret_code, get_error_msg(ret_code), ret_note))
+                    Error_Msg('Set {} leverage Fail!!\n#{} : {}\n{}'.format(order.sym, ret_code, get_error_msg(ret_code), ret_note))
                     match ret_code:
                         case _:
                             log.log('untrack_error_code')
-                            Symbol_List.pop(open.ID)
-                            System_Msg('Remove {} from Symbol List'. format(open.sym))
+                            Symbol_List.pop(order.ID)
+                            System_Msg('Remove {} from Symbol List'. format(order.sym))
                             continue
 
             # Query price
             try:
-                temp = client.latest_information_for_symbol(symbol = open.sym)
-                open.price = (float)(temp['result'][0]['last_price'])
+                temp = client.latest_information_for_symbol(symbol = order.sym)
+                order.price = (float)(temp['result'][0]['last_price'])
             except Exception as err:
                 err = str(err)
                 if not err.endswith('}.'):
                     raise Exception(err)
                 ret_code = err.split('(ErrCode: ')[1].split(')')[0]
                 ret_note = err.split('(ErrCode: ')[0]
-                Error_Msg('Get {} price Fail!!\n#{} : {}\n{}'.format(open.sym, ret_code, get_error_msg(ret_code), ret_note))
+                Error_Msg('Get {} price Fail!!\n#{} : {}\n{}'.format(order.sym, ret_code, get_error_msg(ret_code), ret_note))
                 match ret_code:
                     case _:
                         log.log('untrack_error_code')
-                        Symbol_List.pop(open.ID)
-                        System_Msg('Remove {} from Symbol List'. format(open.sym))
+                        Symbol_List.pop(order.ID)
+                        System_Msg('Remove {} from Symbol List'. format(order.sym))
                         continue
 
             # Calculate rough TP/SL and qty
-            open.qty = qty_trim((cfg.operate_USDT * cfg.Leverage / open.price), Symbol_List[open.ID].qty_step)
-            if open.side == 'Buy':
-                open.TP = price_trim((1 + (cfg.TP_percentage / cfg.Leverage / 100)) * open.price, Symbol_List[open.ID].tick_size)
-                open.SL = price_trim((1 - (cfg.SL_percentage / cfg.Leverage / 100)) * open.price, Symbol_List[open.ID].tick_size, True)
-            elif open.side == 'Sell':
-                open.TP = price_trim((1 - (cfg.TP_percentage / cfg.Leverage / 100)) * open.price, Symbol_List[open.ID].tick_size)
-                open.SL = price_trim((1 + (cfg.SL_percentage / cfg.Leverage / 100)) * open.price, Symbol_List[open.ID].tick_size, True)
+            order.qty = qty_trim((cfg.operate_USDT * cfg.Leverage / order.price), Symbol_List[order.ID].qty_step)
+            if order.side == 'Buy':
+                order.TP = price_trim((1 + (cfg.TP_percentage / cfg.Leverage / 100)) * order.price, Symbol_List[order.ID].tick_size)
+                order.SL = price_trim((1 - (cfg.SL_percentage / cfg.Leverage / 100)) * order.price, Symbol_List[order.ID].tick_size, True)
+            elif order.side == 'Sell':
+                order.TP = price_trim((1 - (cfg.TP_percentage / cfg.Leverage / 100)) * order.price, Symbol_List[order.ID].tick_size)
+                order.SL = price_trim((1 + (cfg.SL_percentage / cfg.Leverage / 100)) * order.price, Symbol_List[order.ID].tick_size, True)
             
-            log.log_and_show('Opening {} {} {} order at about {}'.format(open.qty, open.sym, open.side, open.price))
+            log.log_and_show('Opening {} {} {} order at about {}'.format(order.qty, order.sym, order.side, order.price))
 
             # Open order
             try:
-                open.posi = client.place_active_order(
-                                                        symbol = open.sym,\
-                                                        side = open.side,\
+                order.posi = client.place_active_order(
+                                                        symbol = order.sym,\
+                                                        side = order.side,\
                                                         order_type = "Market",\
-                                                        qty = open.qty,\
+                                                        qty = order.qty,\
                                                         time_in_force = "GoodTillCancel",\
                                                         reduce_only = False,\
                                                         close_on_trigger = False,\
-                                                        take_profit = open.TP,\
-                                                        stop_loss = open.SL
+                                                        take_profit = order.TP,\
+                                                        stop_loss = order.SL
                                                     )
-                if open.posi['ret_msg'] != 'OK':
-                    System_Msg('{} Order Create Successfully !!\nwith return msg: {}'.format(open.sym,open.posi['ret_msg']))
+                if order.posi['ret_msg'] != 'OK':
+                    System_Msg('{} Order Create Successfully !!\nwith return msg: {}'.format(order.sym,order.posi['ret_msg']))
                 else:
-                    log.log_and_show('{} Order Create Successfully !!'.format(open.sym))
+                    log.log_and_show('{} Order Create Successfully !!'.format(order.sym))
 
-                pnl.track_list.append({'symbol' : open.sym, 'side' : open.side})
+                pnl.track_list.append({'symbol' : order.sym, 'side' : order.side})
             except Exception as err:
                 err = str(err)
                 if not err.endswith('}.'):
@@ -669,11 +669,11 @@ while True:
                 log.log(err)
                 ret_code = err.split('(ErrCode: ')[1].split(')')[0]
                 ret_note = err.split('(ErrCode: ')[0]
-                Error_Msg('Open {} order Fail!!\n#{} : {}\n{}'.format(open.sym, ret_code, get_error_msg(ret_code), ret_note))
+                Error_Msg('Open {} order Fail!!\n#{} : {}\n{}'.format(order.sym, ret_code, get_error_msg(ret_code), ret_note))
                 match ret_code:
                     case '130023':
-                        Symbol_List.pop(open.ID)
-                        System_Msg('Remove {} from Symbol List'. format(open.sym))
+                        Symbol_List.pop(order.ID)
+                        System_Msg('Remove {} from Symbol List'. format(order.sym))
                         continue
                     case '130021':
                         # Stop open order
@@ -681,34 +681,34 @@ while True:
                         continue
                     case _:
                         log.log('untrack_error_code')
-                        Symbol_List.pop(open.ID)
-                        System_Msg('Remove {} from Symbol List'. format(open.sym))
+                        Symbol_List.pop(order.ID)
+                        System_Msg('Remove {} from Symbol List'. format(order.sym))
                         continue
 
             try:
                 retry = 3
                 while retry:
                     #Get entry price                    
-                    temp = client.my_position(symbol = open.sym)
-                    if open.side == 'Buy':
+                    temp = client.my_position(symbol = order.sym)
+                    if order.side == 'Buy':
                         if temp['result'][0]['size'] > 0:
-                            open.price = (float)(temp['result'][0]['entry_price'])
+                            order.price = (float)(temp['result'][0]['entry_price'])
                             # Calculate new TP/SL
-                            open.TP = price_trim((1 + (cfg.TP_percentage / cfg.Leverage / 100)) * open.price, Symbol_List[open.ID].tick_size)
-                            open.SL = price_trim((1 - (cfg.SL_percentage / cfg.Leverage / 100)) * open.price, Symbol_List[open.ID].tick_size, True)
+                            order.TP = price_trim((1 + (cfg.TP_percentage / cfg.Leverage / 100)) * order.price, Symbol_List[order.ID].tick_size)
+                            order.SL = price_trim((1 - (cfg.SL_percentage / cfg.Leverage / 100)) * order.price, Symbol_List[order.ID].tick_size, True)
                             break
-                    elif open.side == 'Sell':
+                    elif order.side == 'Sell':
                         if temp['result'][1]['size'] > 0:
-                            open.price = (float)(temp['result'][1]['entry_price'])
+                            order.price = (float)(temp['result'][1]['entry_price'])
                             # Calculate new TP/SL
-                            open.TP = price_trim((1 - (cfg.TP_percentage / cfg.Leverage / 100)) * open.price, Symbol_List[open.ID].tick_size)
-                            open.SL = price_trim((1 + (cfg.SL_percentage / cfg.Leverage / 100)) * open.price, Symbol_List[open.ID].tick_size, True)
+                            order.TP = price_trim((1 - (cfg.TP_percentage / cfg.Leverage / 100)) * order.price, Symbol_List[order.ID].tick_size)
+                            order.SL = price_trim((1 + (cfg.SL_percentage / cfg.Leverage / 100)) * order.price, Symbol_List[order.ID].tick_size, True)
                             break
                     delay.delay(0.2)
                     retry -= 1
 
                 if not retry:
-                    Error_Msg('Get {} position entry retry Fail!!'.format(open.sym))
+                    Error_Msg('Get {} position entry retry Fail!!'.format(order.sym))
                     continue
             except Exception as err:
                 err = str(err)
@@ -716,7 +716,7 @@ while True:
                     raise Exception(err)
                 ret_code = err.split('(ErrCode: ')[1].split(')')[0]
                 ret_note = err.split('(ErrCode: ')[0]
-                Error_Msg('Get {} position entry price Fail!!\n#{} : {}\n{}'.format(open.sym, ret_code, get_error_msg(ret_code), ret_note))
+                Error_Msg('Get {} position entry price Fail!!\n#{} : {}\n{}'.format(order.sym, ret_code, get_error_msg(ret_code), ret_note))
                 match ret_code:
                     case _:
                         log.log('untrack_error_code')
@@ -726,16 +726,16 @@ while True:
             # Calculate Trailing price
             try:
                 if cfg.Trailing_Stop != 0:
-                    open.trailing = price_trim(open.price * (cfg.Trailing_Stop / cfg.Leverage / 100), Symbol_List[open.ID].tick_size)
+                    order.trailing = price_trim(order.price * (cfg.Trailing_Stop / cfg.Leverage / 100), Symbol_List[order.ID].tick_size)
 
                     # Set trailing stop
-                    temp = client.set_trading_stop(symbol = open.sym, side = open.side, trailing_stop = open.trailing,\
-                                                take_profit = open.TP, stop_loss = open.SL,\
+                    temp = client.set_trading_stop(symbol = order.sym, side = order.side, trailing_stop = order.trailing,\
+                                                take_profit = order.TP, stop_loss = order.SL,\
                                                 tp_trigger_by = cfg.Trigger, sl_trigger_by = cfg.Trigger)
                 else:
                     # fine tune TPSL
-                    temp = client.set_trading_stop(symbol = open.sym, side = open.side,\
-                                                take_profit = open.TP, stop_loss = open.SL,\
+                    temp = client.set_trading_stop(symbol = order.sym, side = order.side,\
+                                                take_profit = order.TP, stop_loss = order.SL,\
                                                 tp_trigger_by = cfg.Trigger, sl_trigger_by = cfg.Trigger)
             except Exception as err:
                 err = str(err)
@@ -743,19 +743,19 @@ while True:
                     raise Exception(err)
                 ret_code = err.split('(ErrCode: ')[1].split(')')[0]
                 ret_note = err.split('(ErrCode: ')[0]
-                Error_Msg('Set {} trailing and fine tune TPSL Fail!!\n#{} : {}\n{}'.format(open.sym, ret_code, get_error_msg(ret_code), ret_note))
+                Error_Msg('Set {} trailing and fine tune TPSL Fail!!\n#{} : {}\n{}'.format(order.sym, ret_code, get_error_msg(ret_code), ret_note))
                 match ret_code:
                     case _:
                         log.log('untrack_error_code')
                         continue
                         
-            log.log_and_show('Entry pirce : {}'.format(open.price))
+            log.log_and_show('Entry pirce : {}'.format(order.price))
             if cfg.Trailing_Stop != 0:
-                log.log_and_show('TP : {},  SL : {},  Trailing stop : {}\n'.format(open.TP, open.SL, open.trailing))
+                log.log_and_show('TP : {},  SL : {},  Trailing stop : {}\n'.format(order.TP, order.SL, order.trailing))
             else:
-                log.log_and_show('TP : {},  SL : {}\n'.format(open.TP, open.SL))
+                log.log_and_show('TP : {},  SL : {}\n'.format(order.TP, order.SL))
 
-            del open
+            del order
             gc.collect()
             delay.delay(cfg.open_order_interval)
         else:
