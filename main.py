@@ -238,8 +238,7 @@ if not cfg.load_cfg():
     elif (int)(cfg.version.split('.')[1]) < (int)(Version.split('.')[1]):
         #Sub version different
         cfg.update_version()
-        cfg.load_cfg()
-        
+        cfg.load_cfg()        
 
 ### Check parameter
 if cfg.open_order_interval < 1:
@@ -542,6 +541,10 @@ while True:
                     case '130023':
                         Symbol_List.pop(open.ID)
                         System_Msg('Remove {} from Symbol List'. format(open.sym))
+                        continue
+                    case '130021':
+                        # Stop open order anymore
+                        cfg.Max_operate_position = 0
                         continue
                     case _:
                         log.log('untrack_error_code')
