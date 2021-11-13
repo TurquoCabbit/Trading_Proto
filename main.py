@@ -16,7 +16,7 @@ import Loading_animation
 from error_code import get_error_msg
 
 ##########################################################
-Version = '3.05'
+Version = '3.06'
 Date = '2021/11/13'
 
 Start_time = (int)(time())
@@ -393,8 +393,7 @@ while True:
     if cfg.Max_operate_position > len(Symbol_List):
         System_Msg('Decrease Operate_position form {} to {}'.format(cfg.Max_operate_position, len(Symbol_List)))
         cfg.Max_operate_position = len(Symbol_List)
-
-    
+        
     try:
         ### Query current wallet balance
         try:
@@ -421,6 +420,8 @@ while True:
             log.log_and_show('Unrealized pnl:\t{:.2f}\tUSDT, {:.2f}%\n'.format(pnl.total_pnl, pnl.total_pnl_rate))
         except Exception as err:
             err = str(err)
+            if not err.endswith('}.'):
+                raise Exception(err)
             ret_code = err.split('(ErrCode: ')[1].split(')')[0]
             ret_note = err.split('(ErrCode: ')[0]
             Error_Msg('Get wallet balance Fail!!\n#{} : {}\n{}'.format(ret_code, get_error_msg(ret_code), ret_note))
@@ -431,7 +432,6 @@ while True:
                 case _:
                     log.log('untrack_error_code')
                     pass
-
 
         ### Query current position
         current_position_qty = 0
@@ -444,6 +444,8 @@ while True:
             position = client.my_position(endpoint = '/private/linear/position/list')
         except Exception as err:
             err = str(err)
+            if not err.endswith('}.'):
+                raise Exception(err)
             ret_code = err.split('(ErrCode: ')[1].split(')')[0]
             ret_note = err.split('(ErrCode: ')[0]
             Error_Msg('Query Position Fail!!\n#{} : {}\n{}'.format(ret_code, get_error_msg(ret_code), ret_note))
@@ -519,6 +521,8 @@ while True:
                         pnl.track_list.pop(pnl.track_list.index(i))
                     except Exception as err:
                         err = str(err)
+                        if not err.endswith('}.'):
+                            raise Exception(err)
                         ret_code = err.split('(ErrCode: ')[1].split(')')[0]
                         ret_note = err.split('(ErrCode: ')[0]
                         Error_Msg('Get {} close pnl Fail!!\n#{} : {}\n{}'.format(i['symbol'], ret_code, get_error_msg(ret_code), ret_note))
@@ -558,6 +562,8 @@ while True:
                     Symbol_List[open.ID].tpsl_mode = 'Full'
                 except Exception as err:
                     err = str(err)
+                    if not err.endswith('}.'):
+                        raise Exception(err)
                     ret_code = err.split('(ErrCode: ')[1].split(')')[0]
                     ret_note = err.split('(ErrCode: ')[0]
                     Error_Msg('Set {} TPSL mode Fail!!\n#{} : {}\n{}'.format(open.sym, ret_code, get_error_msg(ret_code), ret_note))
@@ -577,6 +583,8 @@ while True:
                     Symbol_List[open.ID].leverage = cfg.Leverage
                 except Exception as err:
                     err = str(err)
+                    if not err.endswith('}.'):
+                        raise Exception(err)
                     ret_code = err.split('(ErrCode: ')[1].split(')')[0]
                     ret_note = err.split('(ErrCode: ')[0]
                     Error_Msg('Set {} margin mode Fail!!\n#{} : {}\n{}'.format(open.sym, ret_code, get_error_msg(ret_code), ret_note))
@@ -594,6 +602,8 @@ while True:
                     Symbol_List[open.ID].leverage = cfg.Leverage
                 except Exception as err:
                     err = str(err)
+                    if not err.endswith('}.'):
+                        raise Exception(err)
                     ret_code = err.split('(ErrCode: ')[1].split(')')[0]
                     ret_note = err.split('(ErrCode: ')[0]
                     Error_Msg('Set {} leverage Fail!!\n#{} : {}\n{}'.format(open.sym, ret_code, get_error_msg(ret_code), ret_note))
@@ -610,6 +620,8 @@ while True:
                 open.price = (float)(temp['result'][0]['last_price'])
             except Exception as err:
                 err = str(err)
+                if not err.endswith('}.'):
+                    raise Exception(err)
                 ret_code = err.split('(ErrCode: ')[1].split(')')[0]
                 ret_note = err.split('(ErrCode: ')[0]
                 Error_Msg('Get {} price Fail!!\n#{} : {}\n{}'.format(open.sym, ret_code, get_error_msg(ret_code), ret_note))
@@ -652,6 +664,8 @@ while True:
                 pnl.track_list.append({'symbol' : open.sym, 'side' : open.side})
             except Exception as err:
                 err = str(err)
+                if not err.endswith('}.'):
+                    raise Exception(err)
                 log.log(err)
                 ret_code = err.split('(ErrCode: ')[1].split(')')[0]
                 ret_note = err.split('(ErrCode: ')[0]
@@ -662,7 +676,7 @@ while True:
                         System_Msg('Remove {} from Symbol List'. format(open.sym))
                         continue
                     case '130021':
-                        # Stop open order anymore
+                        # Stop open order
                         cfg.Max_operate_position = 0
                         continue
                     case _:
@@ -698,6 +712,8 @@ while True:
                     continue
             except Exception as err:
                 err = str(err)
+                if not err.endswith('}.'):
+                    raise Exception(err)
                 ret_code = err.split('(ErrCode: ')[1].split(')')[0]
                 ret_note = err.split('(ErrCode: ')[0]
                 Error_Msg('Get {} position entry price Fail!!\n#{} : {}\n{}'.format(open.sym, ret_code, get_error_msg(ret_code), ret_note))
@@ -723,6 +739,8 @@ while True:
                                                 tp_trigger_by = cfg.Trigger, sl_trigger_by = cfg.Trigger)
             except Exception as err:
                 err = str(err)
+                if not err.endswith('}.'):
+                    raise Exception(err)
                 ret_code = err.split('(ErrCode: ')[1].split(')')[0]
                 ret_note = err.split('(ErrCode: ')[0]
                 Error_Msg('Set {} trailing and fine tune TPSL Fail!!\n#{} : {}\n{}'.format(open.sym, ret_code, get_error_msg(ret_code), ret_note))
@@ -748,6 +766,7 @@ while True:
 
 
     except Exception as Err:
-        log.log(Err)
+        log.show('')
+        Error_Msg((str)(Err))
         os.system('pause')
         os._exit(0)
