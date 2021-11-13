@@ -233,10 +233,13 @@ if not cfg.load_cfg():
     if (int)(cfg.version.split('.')[0]) != (int)(Version.split('.')[0]):
         # Main version different
         cfg.upgrade_cfg()
+        cfg.load_cfg()
 
     elif (int)(cfg.version.split('.')[1]) < (int)(Version.split('.')[1]):
         #Sub version different
         cfg.update_version()
+        cfg.load_cfg()
+        
 
 ### Check parameter
 if cfg.open_order_interval < 1:
