@@ -1,3 +1,4 @@
+from logging import PlaceHolder
 from types import coroutine
 from pybit import HTTP
 from time import localtime
@@ -17,8 +18,8 @@ import Loading_animation
 from error_code import get_error_msg
 
 ##########################################################
-Version = '3.03'
-Date = '2021/11/12'
+Version = '3.04'
+Date = '2021/11/13'
 
 Start_time = (int)(time())
 
@@ -29,9 +30,9 @@ delay = Loading_animation.delay_anima()
 ##############################################################################################################################
 ### init log
 log = Make_log.Log('log')
-log.log_and_show('')
+log.log()
+log.log('=============================START==============================')
 log.log_and_show('Bybit USDT perpetual trading bot ver {} {}'.format(Version, Date))
-log.log_and_show('========================START=========================')
 
 class Symbol:
     def __init__(self, Symbol, tick_size, qty_step) -> None:
@@ -58,18 +59,18 @@ class CFG:
     def __init__(self, version) -> None:
         self.version = version
         self.Test_net = True
-        self.Max_operate_position = 5
-        self.operate_USDT = 10
-        self.Leverage = 20
-        self.side = 'Both'
-        self.TP_percentage = 100
-        self.SL_percentage = 10
-        self.Trigger = 'LastPrice'
-        self.Trailing_Stop = 0
-        self.Group = 'all'
-        self.open_order_interval = 1
-        self.poll_order_interval = 60
-        self.Token_list = ['BTC', 'ETH']
+        self.Max_operate_position = None
+        self.operate_USDT = None
+        self.Leverage = None
+        self.side = None
+        self.TP_percentage = None
+        self.SL_percentage = None
+        self.Trigger = None
+        self.Trailing_Stop = None
+        self.Group = None
+        self.open_order_interval = None
+        self.poll_order_interval = None
+        self.Token_list = []
         self.Black_list = []
         
         self.cfg_init = {
@@ -169,22 +170,20 @@ class CFG:
         os._exit(0)
 
 def Error_Msg(str = ''):
-    time = datetime.now()
+    log.log(str)
     str = str.split('\n')
 
     for i in str:
-        log.log(i)
-        os.system('echo [31m{} : {}'.format(time.strftime('%H:%M:%S'), i))        
-    os.system('echo [0m{} :'.format(time.strftime('%H:%M:%S')))
+        os.system('echo [31m{} : {}'.format(datetime.now().strftime('%H:%M:%S'), i))        
+    os.system('echo [0m{} :'.format(datetime.now().strftime('%H:%M:%S')))
 
 def System_Msg(str = ''):
-    time = datetime.now()
+    log.log(str)
     str = str.split('\n')
 
     for i in str:
-        log.log(i)
-        os.system('echo [33m{} : {}'.format(time.strftime('%H:%M:%S'), i))
-    os.system('echo [0m{} :'.format(time.strftime('%H:%M:%S')))
+        os.system('echo [33m{} : {}'.format(datetime.now().strftime('%H:%M:%S'), i))
+    os.system('echo [0m{} :'.format(datetime.now().strftime('%H:%M:%S')))
 
 def Print_and_pause(str = ''):
     log.show(str)
@@ -252,6 +251,25 @@ if cfg.side != 'Buy' and cfg.side != 'Sell':
 if cfg.Trigger != 'MarkPrice' and cfg.Trigger != 'LastPrice' and cfg.Trigger != 'IndexPrice':
     cfg.Trigger = 'LastPrice'
 
+log.log_and_show('cfg.json loaded:')
+log.log('\t\tVersion: {}\n\
+         \tRun on test net: {}\n\
+         \tOperate position: {}\n\
+         \tOperate USDT: {}\n\
+         \tLeverage: {}\n\
+         \tOperate side: {}\n\
+         \tTP: {}%\n\
+         \tSL: {}%\n\
+         \tTPSL trigger: {}\n\
+         \tTrailing stop: {}%\n\
+         \tOperate group: {}\n\
+         \tOpen order interval: {}s\n\
+         \tPolling interval: {}s'.format(\
+         cfg.version, cfg.Test_net, cfg.Max_operate_position,\
+         cfg.operate_USDT, cfg.Leverage, cfg.side, cfg.TP_percentage,\
+         cfg.SL_percentage, cfg.Trigger, cfg.Trailing_Stop, cfg.Group,\
+         cfg.open_order_interval, cfg.poll_order_interval))
+
 ##############################################################################################################################
 ### Load Symbol List
 if not os.path.isfile('Symbol_list.json'):
@@ -301,7 +319,9 @@ while True:
 
     ### Check if eligible symbol qty exceed max operated qty
     if cfg.Max_operate_position > len(Symbol_List):
+        System_Msg('Decrease Operate_position form {} to {}'.format(cfg.Max_operate_position, len(Symbol_List)))
         cfg.Max_operate_position = len(Symbol_List)
+
     
     try:
         ### Query current wallet balance
@@ -324,8 +344,6 @@ while True:
                 case _:
                     log.log('untrack_error_code')
                     pass
-
-
 
 
         ### Query current position
