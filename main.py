@@ -1,5 +1,3 @@
-from logging import PlaceHolder
-from types import coroutine
 from pybit import HTTP
 from time import localtime
 from time import strftime
@@ -12,13 +10,13 @@ import gc
 import random
 random.seed()
 
-import Make_log
+from Make_log import Log
 import Update_Symbol_List
 import Loading_animation
 from error_code import get_error_msg
 
 ##########################################################
-Version = '3.04'
+Version = '3.05'
 Date = '2021/11/13'
 
 Start_time = (int)(time())
@@ -29,10 +27,10 @@ delay = Loading_animation.delay_anima()
 
 ##############################################################################################################################
 ### init log
-log = Make_log.Log('log')
+log = Log('log')
 log.log()
 log.log('=============================START==============================')
-log.log_and_show('Bybit USDT perpetual trading bot ver {} {}'.format(Version, Date))
+log.log_and_show('Bybit USDT perpetual trading bot ver {} {}\n'.format(Version, Date))
 
 class Symbol:
     def __init__(self, Symbol, tick_size, qty_step) -> None:
@@ -54,6 +52,63 @@ class Open:
         self.TP = 0
         self.SL = 0
         self.trailing = 0
+
+class PNL_data:
+    def __init__(self, dir) -> None:
+        if not os.path.isdir(dir):
+            os.mkdir(dir)
+        
+        self.start_track_pnl = False
+        self.closed_position = 0
+        self.win_position = 0
+        self.win_rate = 0
+        self.total_pnl = 0
+        self.total_pnl_rate = 0
+        self.track_list = []
+        
+        self.start_balance = 'start'
+        self.current_balance = 0
+
+        self.log = Log('{}/log'.format(dir))
+
+    def load(self):
+        with open('pnl/pnl.json', 'r') as file:
+            self.temp = json.load(file)
+        try:
+            self.closed_position = self.temp['closed_position']
+            self.win_position = self.temp['win_position']
+            self.win_rate = self.temp['win_rate']
+            self.total_pnl = self.temp['total_pnl']
+            self.total_pnl_rate = self.temp['total_pnl_rate']
+            self.start_balance = self.temp['start_balance']
+            self.current_balance = self.temp['current_balance']
+        except KeyError:
+            self.closed_position = 0
+            self.win_position = 0
+            self.win_rate = 0
+            self.total_pnl = 0
+            self.total_pnl_rate = 0            
+            self.start_balance = 'start'
+            self.current_balance = 0
+
+        del self.temp        
+        
+    def write(self):
+        self.temp = {
+            'closed_position' :  self.closed_position,
+            'win_position' :  self.win_position,
+            'win_rate' :  self.win_rate,
+            'total_pnl' :  self.total_pnl,
+            'total_pnl_rate' :  self.total_pnl_rate,
+            'start_balance' :  self.start_balance,
+            'current_balance' :  self.current_balance
+        }
+        
+        with open('pnl/pnl.json', 'w') as file:
+            self.temp = json.dump(self.temp, file, indent = 4)
+
+        del self.temp   
+
 
 class CFG:
     def __init__(self, version) -> None:
@@ -95,7 +150,6 @@ class CFG:
                                 'BIT',  'ADA',  'ICP'
                                 ]
                         }
-
     
     def new_cfg(self):
         with open('cfg.json', 'w') as file:
@@ -108,7 +162,7 @@ class CFG:
             self.version = self.cfg['Version']
             if self.version != Version:
                 return False
-
+                
             self.Test_net = self.cfg['Run_on_testnet']
             self.Max_operate_position = self.cfg['Operate_position']
             self.operate_USDT = self.cfg['Order_value_USDT']
@@ -186,7 +240,7 @@ def System_Msg(str = ''):
     os.system('echo [0m{} :'.format(datetime.now().strftime('%H:%M:%S')))
 
 def Print_and_pause(str = ''):
-    log.show(str)
+    print(str)
     os.system('pause')
 
 def rand_symbol():
@@ -253,24 +307,40 @@ if cfg.side != 'Buy' and cfg.side != 'Sell':
 if cfg.Trigger != 'MarkPrice' and cfg.Trigger != 'LastPrice' and cfg.Trigger != 'IndexPrice':
     cfg.Trigger = 'LastPrice'
 
-log.log_and_show('cfg.json loaded:')
-log.log('\t\tVersion: {}\n\
-         \tRun on test net: {}\n\
-         \tOperate position: {}\n\
-         \tOperate USDT: {}\n\
-         \tLeverage: {}\n\
-         \tOperate side: {}\n\
-         \tTP: {}%\n\
-         \tSL: {}%\n\
-         \tTPSL trigger: {}\n\
-         \tTrailing stop: {}%\n\
-         \tOperate group: {}\n\
-         \tOpen order interval: {}s\n\
-         \tPolling interval: {}s'.format(\
-         cfg.version, cfg.Test_net, cfg.Max_operate_position,\
-         cfg.operate_USDT, cfg.Leverage, cfg.side, cfg.TP_percentage,\
-         cfg.SL_percentage, cfg.Trigger, cfg.Trailing_Stop, cfg.Group,\
-         cfg.open_order_interval, cfg.poll_order_interval))
+log.log_and_show('cfg.json loaded')
+log.show('')
+log.log(
+'\tVersion: {}\n\
+\tRun on test net: {}\n\
+\tOperate position: {}\n\
+\tOperate USDT: {}\n\
+\tLeverage: {}\n\
+\tOperate side: {}\n\
+\tTP: {}%\n\
+\tSL: {}%\n\
+\tTPSL trigger: {}\n\
+\tTrailing stop: {}%\n\
+\tOperate group: {}\n\
+\tOpen order interval: {}s\n\
+\tPolling interval: {}s'.format(\
+cfg.version, cfg.Test_net, cfg.Max_operate_position,\
+cfg.operate_USDT, cfg.Leverage, cfg.side, cfg.TP_percentage,\
+cfg.SL_percentage, cfg.Trigger, cfg.Trailing_Stop, cfg.Group,\
+cfg.open_order_interval, cfg.poll_order_interval))
+
+##############################################################################################################################
+### Load history pnl data and init log
+pnl = PNL_data('pnl')
+
+pnl.log.log()
+pnl.log.log('=============================START==============================')
+pnl.log.log('Bybit USDT perpetual trading bot ver {} {}'.format(Version, Date))
+
+if os.path.isfile('pnl/pnl.json'):
+    pnl.load()
+
+if pnl.start_balance != 'start':
+    pnl.log.log('Start wallet balance: {}\n'.format(pnl.start_balance))
 
 ##############################################################################################################################
 ### Load Symbol List
@@ -292,7 +362,7 @@ else:
 if len(sys.argv) == 3:
     if cfg.Test_net:
         # main net api and serect were passed
-        log.log_and_show('Operate on Test Net !!!')
+        log.log_and_show('Operate on Test Net !!!\n')
         client = HTTP('https://api-testnet.bybit.com', api_key=sys.argv[1], api_secret=sys.argv[2])
     else:
         # main net api and serect were passed
@@ -331,9 +401,24 @@ while True:
             wallet = client.get_wallet_balance(coin = "USDT")
             wallet_available = wallet['result']['USDT']['available_balance']
             wallet_equity = wallet['result']['USDT']['equity']
-            log.show('')
-            log.log_and_show('Balance available:\t{:.2f}\tUSDT'.format(wallet_available))
-            log.log_and_show('Balance equity:\t{:.2f}\tUSDT'.format(wallet_equity))
+
+            if pnl.start_balance == 'start':
+                pnl.start_balance = wallet_equity
+                pnl.log.log('Start wallet balance: {}\n'.format(pnl.start_balance))
+            pnl.current_balance = wallet_equity
+            pnl.total_pnl = pnl.current_balance - pnl.start_balance
+            if pnl.start_balance != 0:
+                pnl.total_pnl_rate = pnl.total_pnl * 100 / pnl.start_balance
+            else:
+                pnl.total_pnl_rate = 0
+
+            pnl.log.log('Current wallet balance:\t{:.2f}\t USDT\nUnrealized pnl:\t\t\t{:.2f}\tUSDT, {:.2f}%'\
+                        .format(pnl.current_balance, pnl.total_pnl, pnl.total_pnl_rate))
+            pnl.log.log('Win rate: {:.2f}%'.format(pnl.win_rate))
+            pnl.write()
+
+            log.log_and_show('Balance available:\t{:.2f}\tUSDT\nBalance equity:\t{:.2f}\tUSDT'.format(wallet_available, wallet_equity))
+            log.log_and_show('Unrealized pnl:\t{:.2f}\tUSDT, {:.2f}%\n'.format(pnl.total_pnl, pnl.total_pnl_rate))
         except Exception as err:
             err = str(err)
             ret_code = err.split('(ErrCode: ')[1].split(')')[0]
@@ -353,7 +438,7 @@ while True:
         current_position_buy = 0
         current_position_sel = 0
         Position_List = {'symbol' : [], 'Buy' : [], 'Sell' : []}
-        opened_order = []
+        opened_position = []
 
         try:
             position = client.my_position(endpoint = '/private/linear/position/list')
@@ -403,22 +488,54 @@ while True:
                     current_position_qty += 1
                     if Position_List['Buy'][index]['position_value'] > 0:
                         current_position_buy += 1
-                        opened_order.append('  {}\t{}'.format(Position_List['symbol'][index], 'Buy'))
+                        opened_position.append({'symbol' : Position_List['symbol'][index], 'side' : 'Buy'})
                     elif Position_List['Sell'][index]['position_value'] > 0:
                         current_position_sel += 1
-                        opened_order.append('  {}\t{}'.format(Position_List['symbol'][index], 'Sell'))
+                        opened_position.append({'symbol' : Position_List['symbol'][index], 'side' : 'Sell'})
                     i.opened = True
                 else:
                     i.opened = False
-        
-        log.show('')
-        log.log_and_show('Opened Position: {}\tBuy: {} Sell: {}'.format(current_position_qty, current_position_buy, current_position_sel))
-        for i in opened_order:
-            log.show('\t{}'.format(i))
-        
-        log.show('')
 
-        del opened_order
+        ### track opened position
+        if len(pnl.track_list) == 0 and len(opened_position) != 0:
+            pnl.track_list = opened_position
+            if len(opened_position) >= cfg.Max_operate_position:
+                pnl.start_track_pnl = True
+
+        if pnl.start_track_pnl:
+            for i in pnl.track_list:
+                if not i in opened_position:
+                    try:
+                        closed_pnl = client.closed_profit_and_loss(symbol = i['symbol'], limit = 1, exec_type = 'Trade')['result']['data'][0]['closed_pnl']
+                        
+                        pnl.closed_position += 1
+                        if closed_pnl > 0:
+                            pnl.win_position += 1
+                        
+                        pnl.win_rate = pnl.win_position * 100 / pnl.closed_position
+
+                        pnl.log.log('{} {} position was cloasd, pnl : {} USDT'.format(i['symbol'], i['side'], closed_pnl))
+                        pnl.write()
+                        pnl.track_list.pop(pnl.track_list.index(i))
+                    except Exception as err:
+                        err = str(err)
+                        ret_code = err.split('(ErrCode: ')[1].split(')')[0]
+                        ret_note = err.split('(ErrCode: ')[0]
+                        Error_Msg('Get {} close pnl Fail!!\n#{} : {}\n{}'.format(i['symbol'], ret_code, get_error_msg(ret_code), ret_note))
+                        match ret_code:
+                            case _:
+                                log.log('untrack_error_code')
+                                pass
+
+
+        
+        log.log_and_show('Opened Position: {}\tBuy: {} Sell: {}'.format(current_position_qty, current_position_buy, current_position_sel))
+        
+        for i in opened_position:
+            log.show('\t {}\t{}'.format(i['symbol'], i['side']))
+        log.show('')
+        
+        del opened_position
         del position
         del Position_List
         
@@ -531,6 +648,8 @@ while True:
                     System_Msg('{} Order Create Successfully !!\nwith return msg: {}'.format(open.sym,open.posi['ret_msg']))
                 else:
                     log.log_and_show('{} Order Create Successfully !!'.format(open.sym))
+
+                pnl.track_list.append({'symbol' : open.sym, 'side' : open.side})
             except Exception as err:
                 err = str(err)
                 log.log(err)
@@ -559,11 +678,11 @@ while True:
                     temp = client.my_position(symbol = open.sym)
                     if open.side == 'Buy':
                         if temp['result'][0]['size'] > 0:
-                                open.price = (float)(temp['result'][0]['entry_price'])
-                                # Calculate new TP/SL
-                                open.TP = price_trim((1 + (cfg.TP_percentage / cfg.Leverage / 100)) * open.price, Symbol_List[open.ID].tick_size)
-                                open.SL = price_trim((1 - (cfg.SL_percentage / cfg.Leverage / 100)) * open.price, Symbol_List[open.ID].tick_size, True)
-                                break
+                            open.price = (float)(temp['result'][0]['entry_price'])
+                            # Calculate new TP/SL
+                            open.TP = price_trim((1 + (cfg.TP_percentage / cfg.Leverage / 100)) * open.price, Symbol_List[open.ID].tick_size)
+                            open.SL = price_trim((1 - (cfg.SL_percentage / cfg.Leverage / 100)) * open.price, Symbol_List[open.ID].tick_size, True)
+                            break
                     elif open.side == 'Sell':
                         if temp['result'][1]['size'] > 0:
                             open.price = (float)(temp['result'][1]['entry_price'])
@@ -614,15 +733,17 @@ while True:
                         
             log.log_and_show('Entry pirce : {}'.format(open.price))
             if cfg.Trailing_Stop != 0:
-                log.log_and_show('TP : {},  SL : {},  Trailing stop : {}'.format(open.TP, open.SL, open.trailing))
+                log.log_and_show('TP : {},  SL : {},  Trailing stop : {}\n'.format(open.TP, open.SL, open.trailing))
             else:
-                log.log_and_show('TP : {},  SL : {}'.format(open.TP, open.SL))
-            log.show('')
+                log.log_and_show('TP : {},  SL : {}\n'.format(open.TP, open.SL))
 
             del open
             gc.collect()
             delay.delay(cfg.open_order_interval)
         else:
+            if not pnl.start_track_pnl:
+                pnl.start_track_pnl = True
+
             delay.anima_runtime(cfg.poll_order_interval, Start_time)
 
 
