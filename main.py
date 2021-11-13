@@ -17,7 +17,7 @@ import Loading_animation
 from error_code import get_error_msg
 
 ##########################################################
-Version = '3.02'
+Version = '3.03'
 Date = '2021/11/12'
 
 Start_time = (int)(time())
@@ -318,9 +318,12 @@ while True:
             ret_note = err.split('(ErrCode: ')[0]
             Error_Msg('Get wallet balance Fail!!\n#{} : {}\n{}'.format(ret_code, get_error_msg(ret_code), ret_note))
             match ret_code:
+                case '10003':   # invalid api_key 
+                    os.system('pause')
+                    os._exit(0)
                 case _:
                     log.log('untrack_error_code')
-                    continue
+                    pass
 
 
 
