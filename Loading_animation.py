@@ -30,14 +30,12 @@ class delay_anima:
     def anima_runtime(self, times, start):
         self.cnt = (int)(times)
         while self.cnt > 0:
-            go = time()
             self.cnt -= 1
             m, s = divmod((int)(time()) - start, 60)
             h, m = divmod(m, 60)
             d, h = divmod(h, 24)
             print('  Run time : {:d} days {:02d} h {:02d} m {:02d} s'. format((int)(d), (int)(h), (int)(m), (int)(s)), end = '\r')
-            done = time()
-            sleep(1 + go - done)
+            sleep(1)
 
     
     def delay(self, time):
