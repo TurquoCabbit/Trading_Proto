@@ -10,25 +10,27 @@ class Log:
                 os.mkdir(self.dir)
 
     def show(self, str = ''):
-        time = datetime.now()
-        print('{} : {}'.format(time.strftime('%H:%M:%S'), str))
+        str = str.split('\n')
+        
+        for i in str:
+            print('{} : {}'.format(datetime.now().strftime('%H:%M:%S'), i))
         
 
     def log(self, str = ''):
-        if self.dir != '':
-            time = datetime.now()
-        
-            with open('{}/{}.log'.format(self.dir, time.strftime('%Y-%m-%d')), 'a') as file:
-                file.writelines('{} : {}\n'.format(time.strftime('%Y-%m-%d %H:%M:%S'), str))
+        str = str.split('\n')
+
+        with open('{}/{}.log'.format(self.dir, datetime.now().strftime('%Y-%m-%d')), 'a') as file:
+            for i in str:
+                file.writelines('{} : {}\n'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), i))
 
 
     def log_and_show(self, str = ''):
-        time = datetime.now()
-        print('{} : {}'.format(time.strftime('%H:%M:%S'), str))
-
-        if self.dir != '':
-            with open('{}/{}.log'.format(self.dir, time.strftime('%Y-%m-%d')), 'a') as file:
-                file.writelines('{} : {}\n'.format(time.strftime('%Y-%m-%d %H:%M:%S'), str))
+        str = str.split('\n')
+        
+        with open('{}/{}.log'.format(self.dir, datetime.now().strftime('%Y-%m-%d')), 'a') as file:
+            for i in str:
+                print('{} : {}'.format(datetime.now().strftime('%H:%M:%S'), i))
+                file.writelines('{} : {}\n'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), i))
     
     def get_run_time(self, start):
         m, s = divmod(time() - start, 60)
