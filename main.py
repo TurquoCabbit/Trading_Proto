@@ -16,8 +16,8 @@ import Loading_animation
 from error_code import get_error_msg
 
 ##########################################################
-Version = '3.06'
-Date = '2021/11/13'
+Version = '3.07'
+Date = '2021/11/14'
 
 Start_time = (int)(time())
 
@@ -411,7 +411,7 @@ while True:
             else:
                 pnl.total_pnl_rate = 0
 
-            pnl.log.log('Current wallet balance:\t{:.2f}\t USDT\nUnrealized pnl:\t\t\t{:.2f}\tUSDT, {:.2f}%'\
+            pnl.log.log('Current wallet balance:\t{:.2f}\t USDT\nUnrealized pnl:\t\t{:.2f}\tUSDT, {:.2f}%'\
                         .format(pnl.current_balance, pnl.total_pnl, pnl.total_pnl_rate))
             pnl.log.log('Win rate: {:.2f}%'.format(pnl.win_rate))
             pnl.write()
