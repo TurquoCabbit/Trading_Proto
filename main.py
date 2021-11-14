@@ -309,24 +309,9 @@ if cfg.Trigger != 'MarkPrice' and cfg.Trigger != 'LastPrice' and cfg.Trigger != 
 
 log.log_and_show('cfg.json loaded')
 log.show('')
-log.log(
-'\tVersion: {}\n\
-\tRun on test net: {}\n\
-\tOperate position: {}\n\
-\tOperate USDT: {}\n\
-\tLeverage: {}\n\
-\tOperate side: {}\n\
-\tTP: {}%\n\
-\tSL: {}%\n\
-\tTPSL trigger: {}\n\
-\tTrailing stop: {}%\n\
-\tOperate group: {}\n\
-\tOpen order interval: {}s\n\
-\tPolling interval: {}s'.format(\
-cfg.version, cfg.Test_net, cfg.Max_operate_position,\
-cfg.operate_USDT, cfg.Leverage, cfg.side, cfg.TP_percentage,\
-cfg.SL_percentage, cfg.Trigger, cfg.Trailing_Stop, cfg.Group,\
-cfg.open_order_interval, cfg.poll_order_interval))
+log.log('\tVersion: {}\n\tRun on test net: {}\n\tOperate position: {}\n\tOperate USDT: {}\n'.format(cfg.version, cfg.Test_net, cfg.Max_operate_position, cfg.operate_USDT) +\
+        '\tLeverage: {}\n\tOperate side: {}\n\tTP: {}%\n\tSL: {}%\n\tTPSL trigger: {}\n'.format(cfg.Leverage, cfg.side, cfg.TP_percentage, cfg.SL_percentage, cfg.Trigger) +\
+        '\tTrailing stop: {}%\n\tOperate group: {}\n\tOpen order interval: {}s\n\tPolling interval: {}s'.format(cfg.Trailing_Stop, cfg.Group, cfg.open_order_interval, cfg.poll_order_interval))
 
 ##############################################################################################################################
 ### Load history pnl data and init log
