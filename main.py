@@ -17,7 +17,7 @@ from error_code import get_error_msg
 
 ##########################################################
 Version = '3.07'
-Date = '2021/11/14'
+Date = '2021/11/15'
 
 Start_time = (int)(time())
 
@@ -28,9 +28,8 @@ delay = Loading_animation.delay_anima()
 ##############################################################################################################################
 ### init log
 log = Log('log')
-log.log()
-log.log('=============================START==============================')
-log.log_and_show('Bybit USDT perpetual trading bot ver {} {}\n'.format(Version, Date))
+log.log('\n=============================START==============================')
+log.log_and_show('Bybit USDT perpetual trading bot ver {} {}'.format(Version, Date))
 
 class Symbol:
     def __init__(self, Symbol, tick_size, qty_step) -> None:
@@ -307,8 +306,8 @@ if cfg.side != 'Buy' and cfg.side != 'Sell':
 if cfg.Trigger != 'MarkPrice' and cfg.Trigger != 'LastPrice' and cfg.Trigger != 'IndexPrice':
     cfg.Trigger = 'LastPrice'
 
-log.log_and_show('cfg.json loaded')
 log.show('')
+log.log('cfg.json loaded')
 log.log('\tVersion: {}\n\tRun on test net: {}\n\tOperate position: {}\n\tOperate USDT: {}\n'.format(cfg.version, cfg.Test_net, cfg.Max_operate_position, cfg.operate_USDT) +\
         '\tLeverage: {}\n\tOperate side: {}\n\tTP: {}%\n\tSL: {}%\n\tTPSL trigger: {}\n'.format(cfg.Leverage, cfg.side, cfg.TP_percentage, cfg.SL_percentage, cfg.Trigger) +\
         '\tTrailing stop: {}%\n\tOperate group: {}\n\tOpen order interval: {}s\n\tPolling interval: {}s'.format(cfg.Trailing_Stop, cfg.Group, cfg.open_order_interval, cfg.poll_order_interval))
@@ -317,8 +316,7 @@ log.log('\tVersion: {}\n\tRun on test net: {}\n\tOperate position: {}\n\tOperate
 ### Load history pnl data and init log
 pnl = PNL_data('pnl')
 
-pnl.log.log()
-pnl.log.log('=============================START==============================')
+pnl.log.log('\n=============================START==============================')
 pnl.log.log('Bybit USDT perpetual trading bot ver {} {}'.format(Version, Date))
 
 if os.path.isfile('pnl/pnl.json'):
@@ -347,11 +345,11 @@ else:
 if len(sys.argv) == 3:
     if cfg.Test_net:
         # main net api and serect were passed
-        log.log_and_show('Operate on Test Net !!!\n')
+        log.log('Run on Test Net !!!')
         client = HTTP('https://api-testnet.bybit.com', api_key=sys.argv[1], api_secret=sys.argv[2])
     else:
         # main net api and serect were passed
-        log.log_and_show('Operate on Main Net !!!')
+        log.log('Run on Main Net !!!')
         client = HTTP('https://api.bybit.com', api_key=sys.argv[1], api_secret=sys.argv[2])
 else:
     log.show('Execution cmd :')
@@ -402,7 +400,8 @@ while True:
             pnl.write()
 
             log.log_and_show('Balance available:\t{:.2f}\tUSDT\nBalance equity:\t{:.2f}\tUSDT'.format(wallet_available, wallet_equity))
-            log.log_and_show('Unrealized pnl:\t{:.2f}\tUSDT, {:.2f}%\n'.format(pnl.total_pnl, pnl.total_pnl_rate))
+            log.log_and_show('Unrealized pnl:\t{:.2f}\tUSDT, {:.2f}%\nWin rate: {:.2f}%'.format(pnl.total_pnl, pnl.total_pnl_rate, pnl.win_rate))
+            log.show('')
         except Exception as err:
             err = str(err)
             if not err.endswith('}.'):
