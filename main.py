@@ -16,8 +16,8 @@ import Loading_animation
 from error_code import get_error_msg
 
 ##########################################################
-Version = '3.07'
-Date = '2021/11/15'
+Version = '3.08'
+Date = '2021/11/16'
 
 Start_time = (int)(time())
 
@@ -372,6 +372,10 @@ else:
 while True:        
     try:
         log.log_and_show(log.get_run_time(Start_time))
+        # log cfg every loop
+        log.log('\tVersion: {}\n\tRun on test net: {}\n\tOperate position: {}\n\tOperate USDT: {}\n'.format(cfg.version, cfg.Test_net, cfg.Max_operate_position, cfg.operate_USDT) +\
+                '\tLeverage: {}\n\tOperate side: {}\n\tTP: {}%\n\tSL: {}%\n\tTPSL trigger: {}\n'.format(cfg.Leverage, cfg.side, cfg.TP_percentage, cfg.SL_percentage, cfg.Trigger) +\
+                '\tTrailing stop: {}%\n\tOperate group: {}\n\tOpen order interval: {}s\n\tPolling interval: {}s'.format(cfg.Trailing_Stop, cfg.Group, cfg.open_order_interval, cfg.poll_order_interval))
 
         ### Check if eligible symbol qty exceed max operated qty
         if cfg.Max_operate_position > len(Symbol_List):
