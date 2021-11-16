@@ -16,7 +16,7 @@ import Loading_animation
 from error_code import get_error_msg
 
 ##########################################################
-Version = '3.08'
+Version = '3.09'
 Date = '2021/11/16'
 
 Start_time = (int)(time())
@@ -560,6 +560,9 @@ while True:
                             log.log('untrack_error_code')
                             Symbol_List.pop(order.ID)
                             System_Msg('Remove {} from Symbol List'. format(order.sym))
+                            del order
+                            gc.collect()
+                            delay.delay(cfg.open_order_interval)
                             continue
 
             # Switch to isolated margin mode and set leverage
@@ -581,6 +584,9 @@ while True:
                             log.log('untrack_error_code')
                             Symbol_List.pop(order.ID)
                             System_Msg('Remove {} from Symbol List'. format(order.sym))
+                            del order
+                            gc.collect()
+                            delay.delay(cfg.open_order_interval)
                             continue
 
             # Modify leverage
@@ -600,6 +606,9 @@ while True:
                             log.log('untrack_error_code')
                             Symbol_List.pop(order.ID)
                             System_Msg('Remove {} from Symbol List'. format(order.sym))
+                            del order
+                            gc.collect()
+                            delay.delay(cfg.open_order_interval)
                             continue
 
             # Query price
@@ -618,6 +627,9 @@ while True:
                         log.log('untrack_error_code')
                         Symbol_List.pop(order.ID)
                         System_Msg('Remove {} from Symbol List'. format(order.sym))
+                        del order
+                        gc.collect()
+                        delay.delay(cfg.open_order_interval)
                         continue
 
             # Calculate rough TP/SL and qty
@@ -662,15 +674,24 @@ while True:
                     case '130023':
                         Symbol_List.pop(order.ID)
                         System_Msg('Remove {} from Symbol List'. format(order.sym))
+                        del order
+                        gc.collect()
+                        delay.delay(cfg.open_order_interval)
                         continue
                     case '130021':
                         # Stop open order
                         cfg.Max_operate_position = 0
+                        del order
+                        gc.collect()
+                        delay.delay(cfg.open_order_interval)
                         continue
                     case _:
                         log.log('untrack_error_code')
                         Symbol_List.pop(order.ID)
                         System_Msg('Remove {} from Symbol List'. format(order.sym))
+                        del order
+                        gc.collect()
+                        delay.delay(cfg.open_order_interval)
                         continue
 
             try:
@@ -692,11 +713,14 @@ while True:
                             order.TP = price_trim((1 - (cfg.TP_percentage / cfg.Leverage / 100)) * order.price, Symbol_List[order.ID].tick_size)
                             order.SL = price_trim((1 + (cfg.SL_percentage / cfg.Leverage / 100)) * order.price, Symbol_List[order.ID].tick_size, True)
                             break
-                    delay.delay(0.2)
+                    delay.delay(0.5)
                     retry -= 1
 
                 if not retry:
                     Error_Msg('Get {} position entry retry Fail!!'.format(order.sym))
+                    del order
+                    gc.collect()
+                    delay.delay(cfg.open_order_interval)
                     continue
             except Exception as err:
                 err = str(err)
@@ -708,6 +732,9 @@ while True:
                 match ret_code:
                     case _:
                         log.log('untrack_error_code')
+                        del order
+                        gc.collect()
+                        delay.delay(cfg.open_order_interval)
                         continue
 
             
@@ -735,6 +762,9 @@ while True:
                 match ret_code:
                     case _:
                         log.log('untrack_error_code')
+                        del order
+                        gc.collect()
+                        delay.delay(cfg.open_order_interval)
                         continue
                         
             log.log_and_show('Entry pirce : {}'.format(order.price))
