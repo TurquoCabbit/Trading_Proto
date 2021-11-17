@@ -15,7 +15,7 @@ import Loading_animation
 from error_code import get_error_msg
 
 ##########################################################
-Version = '3.10'
+Version = '4.00'
 Date = '2021/11/17'
 
 Start_time = (int)(time())
@@ -25,6 +25,8 @@ Symbol_List = []
 delay = Loading_animation.delay_anima()
 
 pybit_exce_ending = '}.'
+
+Pause_place_order = False
 
 ##############################################################################################################################
 ### init log
@@ -117,6 +119,7 @@ class CFG:
         self.Test_net = True
         self.Max_operate_position = None
         self.operate_USDT = None
+        self.stop_operate_USDT = None
         self.Leverage = None
         self.side = None
         self.TP_percentage = None
@@ -134,6 +137,7 @@ class CFG:
                             'Run_on_testnet' : True,
                             'Operate_position' : 5,
                             'Order_value_USDT' : 10,
+                            'Stop_operate_USDT' : 10,
                             'Leverage' : 20,
                             'Side' : 'Both',
                             'TP_percentage' : 100,
@@ -167,6 +171,7 @@ class CFG:
             self.Test_net = self.cfg['Run_on_testnet']
             self.Max_operate_position = self.cfg['Operate_position']
             self.operate_USDT = self.cfg['Order_value_USDT']
+            self.stop_operate_USDT = self.cfg['Stop_operate_USDT']
             self.Leverage = self.cfg['Leverage']
             self.side = self.cfg['Side']
             self.TP_percentage = self.cfg['TP_percentage']
@@ -190,7 +195,7 @@ class CFG:
             return True
         
         except KeyError:
-            self.archive_cfg('cfg.json corrupted, archive as cfg_{}.json'.format(strftime('%Y%m%d-%H;%M;%S', localtime(os.path.getmtime('cfg.json')))))
+            self.archive_cfg('cfg.json corrupted, old one archive as cfg_{}.json'.format(strftime('%Y%m%d-%H;%M;%S', localtime(os.path.getmtime('cfg.json')))))
     
     def update_version(self):
         self.version = Version
@@ -199,7 +204,7 @@ class CFG:
             json.dump(self.cfg, file, indent = 4)
     
     def upgrade_cfg(self):
-        System_Msg('cfg.json upgraded, archive as cfg_{}.json'.format(strftime('%Y%m%d-%H;%M;%S', localtime(os.path.getmtime('cfg.json')))))
+        System_Msg('cfg.json upgraded, old one archive as cfg_{}.json'.format(strftime('%Y%m%d-%H;%M;%S', localtime(os.path.getmtime('cfg.json')))))
         if not os.path.isdir('archive'):
             os.mkdir('archive')
         os.rename('cfg.json', 'archive/cfg_{}.json'.format(strftime('%Y%m%d-%H;%M;%S', localtime(os.path.getmtime('cfg.json')))))
@@ -209,10 +214,6 @@ class CFG:
                 self.cfg[i] = self.cfg_init[i]
 
         self.update_version()
-
-        log.log_and_show('Upgrade cfg.json')
-        os.system('pause')
-        os._exit(0)
 
     def archive_cfg(self, msg):
         System_Msg(msg)
@@ -288,14 +289,19 @@ if not cfg.load_cfg():
     if (int)(cfg.version.split('.')[0]) != (int)(Version.split('.')[0]):
         # Main version different
         cfg.upgrade_cfg()
+        log.show('Upgrade cfg.json, please check new config or press any key to continue')
+        os.system('pause')
         cfg.load_cfg()
 
     elif (int)(cfg.version.split('.')[1]) < (int)(Version.split('.')[1]):
         #Sub version different
         cfg.update_version()
-        cfg.load_cfg()        
+        cfg.load_cfg()
 
 ### Check parameter
+if cfg.stop_operate_USDT < cfg.operate_USDT:
+    cfg.stop_operate_USDT = cfg.operate_USDT
+
 if cfg.open_order_interval < 1:
     cfg.open_order_interval = 1
     
@@ -311,8 +317,9 @@ if cfg.Trigger != 'MarkPrice' and cfg.Trigger != 'LastPrice' and cfg.Trigger != 
 log.show('')
 log.log('cfg.json loaded')
 log.log('\tVersion: {}\n\tRun on test net: {}\n\tOperate position: {}\n\tOperate USDT: {}\n'.format(cfg.version, cfg.Test_net, cfg.Max_operate_position, cfg.operate_USDT) +\
-        '\tLeverage: {}\n\tOperate side: {}\n\tTP: {}%\n\tSL: {}%\n\tTPSL trigger: {}\n'.format(cfg.Leverage, cfg.side, cfg.TP_percentage, cfg.SL_percentage, cfg.Trigger) +\
-        '\tTrailing stop: {}%\n\tOperate group: {}\n\tOpen order interval: {}s\n\tPolling interval: {}s'.format(cfg.Trailing_Stop, cfg.Group, cfg.open_order_interval, cfg.poll_order_interval))
+        '\tStop_operate_USDT: {}\n\tLeverage: {}\n\tOperate side: {}\n'.format(cfg.stop_operate_USDT, cfg.Leverage, cfg.side) +\
+        '\tTP: {}%\n\tSL: {}%\n\tTPSL trigger: {}\n\tTrailing stop: {}%\n'.format(cfg.TP_percentage, cfg.SL_percentage, cfg.Trigger, cfg.Trailing_Stop) +\
+        '\tOperate group: {}\n\tOpen order interval: {}s\n\tPolling interval: {}s'.format(cfg.Group, cfg.open_order_interval, cfg.poll_order_interval))
 
 ##############################################################################################################################
 ### Load history pnl data and init log
@@ -376,14 +383,10 @@ while True:
         random.seed()
 
         log.log_and_show(log.get_run_time(Start_time))
-        # log cfg every loop
-        log.log('\tVersion: {}\n\tRun on test net: {}\n\tOperate position: {}\n\tOperate USDT: {}\n'.format(cfg.version, cfg.Test_net, cfg.Max_operate_position, cfg.operate_USDT) +\
-                '\tLeverage: {}\n\tOperate side: {}\n\tTP: {}%\n\tSL: {}%\n\tTPSL trigger: {}\n'.format(cfg.Leverage, cfg.side, cfg.TP_percentage, cfg.SL_percentage, cfg.Trigger) +\
-                '\tTrailing stop: {}%\n\tOperate group: {}\n\tOpen order interval: {}s\n\tPolling interval: {}s'.format(cfg.Trailing_Stop, cfg.Group, cfg.open_order_interval, cfg.poll_order_interval))
 
         ### Check if eligible symbol qty exceed max operated qty
         if cfg.Max_operate_position > len(Symbol_List):
-            System_Msg('Decrease Operate_position form {} to {}'.format(cfg.Max_operate_position, len(Symbol_List)))
+            System_Msg('Operate_position exceed symbol white list qty\nDecrease Operate_position form {} to {}'.format(cfg.Max_operate_position, len(Symbol_List)))
             cfg.Max_operate_position = len(Symbol_List)
 
         ### Query current wallet balance
@@ -391,6 +394,8 @@ while True:
             wallet = client.get_wallet_balance(coin = "USDT")
             wallet_available = wallet['result']['USDT']['available_balance']
             wallet_equity = wallet['result']['USDT']['equity']
+            wallet_real_pnl = wallet['result']['USDT']['realised_pnl']
+            wallet_cum_pnl = wallet['result']['USDT']['cum_realised_pnl']
 
             if pnl.start_balance == 'start':
                 pnl.start_balance = wallet_equity
@@ -402,14 +407,23 @@ while True:
             else:
                 pnl.total_pnl_rate = 0
 
-            pnl.log.log('Current wallet balance:\t{:.2f}\t USDT\nUnrealized pnl:\t\t{:.2f}\tUSDT, {:.2f}%'\
-                        .format(pnl.current_balance, pnl.total_pnl, pnl.total_pnl_rate))
-            pnl.log.log('Win rate: {:.2f}%'.format(pnl.win_rate))
+            pnl.log.log('Current wallet balance:\t{: .2f}\t USDT\n'.format(pnl.current_balance) +\
+                        'Unrealized pnl:\t\t\t{: .2f}\tUSDT,\t{: .2f}%\n'.format( pnl.total_pnl, pnl.total_pnl_rate) +\
+                        'Daily realized pnl:\t\t{: .2f}\tUSDT\nTotal realized pnl:\t\t{: .2f}\tUSDT\n'.format(wallet_real_pnl, wallet_cum_pnl) +\
+                        'Win rate:\t{: .2f}%'.format(pnl.win_rate))
             pnl.write()
 
-            log.log_and_show('Balance available:\t{:.2f}\tUSDT\nBalance equity:\t{:.2f}\tUSDT'.format(wallet_available, wallet_equity))
-            log.log_and_show('Unrealized pnl:\t{:.2f}\tUSDT, {:.2f}%\nWin rate: {:.2f}%'.format(pnl.total_pnl, pnl.total_pnl_rate, pnl.win_rate))
+            log.log_and_show('Balance available:\t{: .2f}\tUSDT\nBalance equity:\t{: .2f}\tUSDT\n'.format(wallet_available, wallet_equity) +\
+                            'Unrealized pnl:\t{: .2f}\tUSDT, {: .2f}%\nWin rate: {: .2f}%'.format(pnl.total_pnl, pnl.total_pnl_rate, pnl.win_rate))
             log.show('')
+
+            if wallet_available < cfg.stop_operate_USDT:
+                Pause_place_order = True
+            else:
+                Pause_place_order = False
+
+
+            del wallet
         except Exception as err:
             err = str(err)
             if not err.endswith(pybit_exce_ending):
@@ -536,7 +550,7 @@ while True:
         del Position_List
         
         ### Randonly open position
-        if current_position_qty < cfg.Max_operate_position:
+        if not Pause_place_order and current_position_qty < cfg.Max_operate_position:
             order = Open()
 
             # Random pick
@@ -552,6 +566,7 @@ while True:
                 try:
                     temp = client.full_partial_position_tp_sl_switch(symbol = order.sym, tp_sl_mode = 'Full')
                     Symbol_List[order.num].tpsl_mode = 'Full'
+                    del temp
                 except Exception as err:
                     err = str(err)
                     if not err.endswith(pybit_exce_ending):
@@ -576,6 +591,7 @@ while True:
                                                                buy_leverage = cfg.Leverage, sell_leverage = cfg.Leverage)
                     Symbol_List[order.num].isolate = True
                     Symbol_List[order.num].leverage = cfg.Leverage
+                    del temp
                 except Exception as err:
                     err = str(err)
                     if not err.endswith(pybit_exce_ending):
@@ -598,6 +614,7 @@ while True:
                 try:
                     temp = client.set_leverage(symbol = order.sym, buy_leverage = cfg.Leverage, sell_leverage = cfg.Leverage)
                     Symbol_List[order.num].leverage = cfg.Leverage
+                    del temp
                 except Exception as err:
                     err = str(err)
                     if not err.endswith(pybit_exce_ending):
@@ -619,6 +636,7 @@ while True:
             try:
                 temp = client.latest_information_for_symbol(symbol = order.sym)
                 order.price = (float)(temp['result'][0]['last_price'])
+                del temp
             except Exception as err:
                 err = str(err)
                 if not err.endswith(pybit_exce_ending):
@@ -667,6 +685,7 @@ while True:
 
                 order.order_id = temp['result']['order_id']
                 pnl.track_list.append({'symbol' : order.sym, 'side' : order.side})
+                del temp
             except Exception as err:
                 err = str(err)
                 if not err.endswith(pybit_exce_ending):
@@ -685,7 +704,7 @@ while True:
                         continue
                     case '130021':
                         # Stop open order
-                        cfg.Max_operate_position = 0
+                        Pause_place_order = True
                         del order
                         gc.collect()
                         delay.delay(cfg.open_order_interval)
@@ -704,7 +723,7 @@ while True:
                 retry = 10
                 while retry:
                     temp = client.query_active_order(symbol = order.sym, order_id = order.order_id)
-                    
+
                     match temp['result']['order_status']:
                         case 'Filled':
                             break
@@ -723,6 +742,8 @@ while True:
                     gc.collect()
                     delay.delay(cfg.open_order_interval)
                     continue
+                
+                del temp
 
             except Exception as err:
                 err = str(err)
@@ -765,6 +786,8 @@ while True:
                     delay.delay(cfg.open_order_interval)
                     continue
 
+                del temp
+
             except Exception as err:
                 err = str(err)
                 if not err.endswith(pybit_exce_ending):
@@ -795,6 +818,7 @@ while True:
                     temp = client.set_trading_stop(symbol = order.sym, side = order.side,\
                                                 take_profit = order.TP, stop_loss = order.SL,\
                                                 tp_trigger_by = cfg.Trigger, sl_trigger_by = cfg.Trigger)
+                del temp
             except Exception as err:
                 err = str(err)
                 if not err.endswith(pybit_exce_ending):
@@ -822,6 +846,9 @@ while True:
         else:
             if not pnl.start_track_pnl:
                 pnl.start_track_pnl = True
+            
+            if Pause_place_order and current_position_qty < cfg.Max_operate_position:
+                System_Msg('Available balance lower than stop operate limit!!\nPause place order!!')
 
             delay.anima_runtime(cfg.poll_order_interval, Start_time)
 
