@@ -704,7 +704,7 @@ while True:
                 retry = 10
                 while retry:
                     temp = client.query_active_order(symbol = order.sym, order_id = order.order_id)
-                    Print_and_pause(temp)
+                    
                     match temp['result']['order_status']:
                         case 'Filled':
                             break
