@@ -24,6 +24,8 @@ Symbol_List = []
 
 delay = Loading_animation.delay_anima()
 
+pybit_exce_ending = '}.'
+
 ##############################################################################################################################
 ### init log
 log = Log('log')
@@ -50,6 +52,7 @@ class Open:
         self.TP = 0
         self.SL = 0
         self.trailing = 0
+        self.order_id = ''
 
 class PNL_data:
     def __init__(self, dir) -> None:
@@ -409,7 +412,7 @@ while True:
             log.show('')
         except Exception as err:
             err = str(err)
-            if not err.endswith('}.'):
+            if not err.endswith(pybit_exce_ending):
                 raise Exception(err)
             ret_code = err.split('(ErrCode: ')[1].split(')')[0]
             ret_note = err.split('(ErrCode: ')[0]
@@ -433,7 +436,7 @@ while True:
             position = client.my_position(endpoint = '/private/linear/position/list')
         except Exception as err:
             err = str(err)
-            if not err.endswith('}.'):
+            if not err.endswith(pybit_exce_ending):
                 raise Exception(err)
             ret_code = err.split('(ErrCode: ')[1].split(')')[0]
             ret_note = err.split('(ErrCode: ')[0]
@@ -510,7 +513,7 @@ while True:
                         pnl.track_list.pop(pnl.track_list.index(i))
                     except Exception as err:
                         err = str(err)
-                        if not err.endswith('}.'):
+                        if not err.endswith(pybit_exce_ending):
                             raise Exception(err)
                         ret_code = err.split('(ErrCode: ')[1].split(')')[0]
                         ret_note = err.split('(ErrCode: ')[0]
@@ -551,7 +554,7 @@ while True:
                     Symbol_List[order.num].tpsl_mode = 'Full'
                 except Exception as err:
                     err = str(err)
-                    if not err.endswith('}.'):
+                    if not err.endswith(pybit_exce_ending):
                         raise Exception(err)
                     ret_code = err.split('(ErrCode: ')[1].split(')')[0]
                     ret_note = err.split('(ErrCode: ')[0]
@@ -575,7 +578,7 @@ while True:
                     Symbol_List[order.num].leverage = cfg.Leverage
                 except Exception as err:
                     err = str(err)
-                    if not err.endswith('}.'):
+                    if not err.endswith(pybit_exce_ending):
                         raise Exception(err)
                     ret_code = err.split('(ErrCode: ')[1].split(')')[0]
                     ret_note = err.split('(ErrCode: ')[0]
@@ -597,7 +600,7 @@ while True:
                     Symbol_List[order.num].leverage = cfg.Leverage
                 except Exception as err:
                     err = str(err)
-                    if not err.endswith('}.'):
+                    if not err.endswith(pybit_exce_ending):
                         raise Exception(err)
                     ret_code = err.split('(ErrCode: ')[1].split(')')[0]
                     ret_note = err.split('(ErrCode: ')[0]
@@ -618,7 +621,7 @@ while True:
                 order.price = (float)(temp['result'][0]['last_price'])
             except Exception as err:
                 err = str(err)
-                if not err.endswith('}.'):
+                if not err.endswith(pybit_exce_ending):
                     raise Exception(err)
                 ret_code = err.split('(ErrCode: ')[1].split(')')[0]
                 ret_note = err.split('(ErrCode: ')[0]
@@ -662,10 +665,11 @@ while True:
                 else:
                     log.log_and_show('{} Order Create Successfully !!'.format(order.sym))
 
+                order.order_id = temp['result']['order_id']
                 pnl.track_list.append({'symbol' : order.sym, 'side' : order.side})
             except Exception as err:
                 err = str(err)
-                if not err.endswith('}.'):
+                if not err.endswith(pybit_exce_ending):
                     raise Exception(err)
                 log.log(err)
                 ret_code = err.split('(ErrCode: ')[1].split(')')[0]
@@ -695,10 +699,47 @@ while True:
                         delay.delay(cfg.open_order_interval)
                         continue
 
+            # Get newly placed order status
             try:
-                retry = 3
+                retry = 10
                 while retry:
-                    #Get entry price                    
+                    temp = client.query_active_order(symbol = order.sym, order_id = order.order_id)
+                    Print_and_pause(temp)
+                    match temp['result']['order_status']:
+                        case 'Filled':
+                            break
+                        case 'Rejected' | 'Cancelled':
+                            retry = 0
+                            break
+                        case _:
+                            pass
+
+                    delay.delay(0.2)
+                    retry -= 1
+                
+                if not retry:
+                    Error_Msg('{} lasted order placed Fail!!'.format(order.sym))
+                    del order
+                    gc.collect()
+                    delay.delay(cfg.open_order_interval)
+                    continue
+
+            except Exception as err:
+                err = str(err)
+                if not err.endswith(pybit_exce_ending):
+                    raise Exception(err)
+                ret_code = err.split('(ErrCode: ')[1].split(')')[0]
+                ret_note = err.split('(ErrCode: ')[0]
+                Error_Msg('Get {} lasted opened order Fail!!\n#{} : {}\n{}'.format(order.sym, ret_code, get_error_msg(ret_code), ret_note))
+                match ret_code:
+                    case _:
+                        log.log('untrack_error_code')
+                        pass
+
+            #Get entry price
+            try:
+                retry = 5
+                while retry:
                     temp = client.my_position(symbol = order.sym)
                     if order.side == 'Buy':
                         if temp['result'][0]['size'] > 0:
@@ -714,7 +755,7 @@ while True:
                             order.TP = price_trim((1 - (cfg.TP_percentage / cfg.Leverage / 100)) * order.price, Symbol_List[order.num].tick_size)
                             order.SL = price_trim((1 + (cfg.SL_percentage / cfg.Leverage / 100)) * order.price, Symbol_List[order.num].tick_size, True)
                             break
-                    delay.delay(0.5)
+                    delay.delay(0.2)
                     retry -= 1
 
                 if not retry:
@@ -723,9 +764,10 @@ while True:
                     gc.collect()
                     delay.delay(cfg.open_order_interval)
                     continue
+
             except Exception as err:
                 err = str(err)
-                if not err.endswith('}.'):
+                if not err.endswith(pybit_exce_ending):
                     raise Exception(err)
                 ret_code = err.split('(ErrCode: ')[1].split(')')[0]
                 ret_note = err.split('(ErrCode: ')[0]
@@ -755,7 +797,7 @@ while True:
                                                 tp_trigger_by = cfg.Trigger, sl_trigger_by = cfg.Trigger)
             except Exception as err:
                 err = str(err)
-                if not err.endswith('}.'):
+                if not err.endswith(pybit_exce_ending):
                     raise Exception(err)
                 ret_code = err.split('(ErrCode: ')[1].split(')')[0]
                 ret_note = err.split('(ErrCode: ')[0]
