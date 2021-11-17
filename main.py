@@ -8,6 +8,7 @@ import os
 import json
 import gc
 import random
+import csv
 
 from Make_log import Log
 import Update_Symbol_List
@@ -15,7 +16,7 @@ import Loading_animation
 from error_code import get_error_msg
 
 ##########################################################
-Version = '4.00'
+Version = '4.01'
 Date = '2021/11/17'
 
 Start_time = (int)(time())
@@ -110,8 +111,19 @@ class PNL_data:
         with open('pnl/pnl.json', 'w') as file:
             self.temp = json.dump(self.temp, file, indent = 4)
 
-        del self.temp   
+        del self.temp
 
+    
+    def record_balance(self):
+        if not os.path.isfile('pnl/balance.csv'):
+            with open('pnl/balance.csv', 'a', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow(['time', 'balance'])
+        
+        with open('pnl/balance.csv', 'a', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow([(int)(time()), self.current_balance])
+                
 
 class CFG:
     def __init__(self, version) -> None:
@@ -412,6 +424,7 @@ while True:
                         'Daily realized pnl:\t\t{: .2f}\tUSDT\nTotal realized pnl:\t\t{: .2f}\tUSDT\n'.format(wallet_real_pnl, wallet_cum_pnl) +\
                         'Win rate:\t{: .2f}%'.format(pnl.win_rate))
             pnl.write()
+            pnl.record_balance()
 
             log.log_and_show('Balance available:\t{: .2f}\tUSDT\nBalance equity:\t{: .2f}\tUSDT\n'.format(wallet_available, wallet_equity) +\
                             'Unrealized pnl:\t{: .2f}\tUSDT, {: .2f}%\nWin rate: {: .2f}%'.format(pnl.total_pnl, pnl.total_pnl_rate, pnl.win_rate))
