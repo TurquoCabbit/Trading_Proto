@@ -16,7 +16,7 @@ import Loading_animation
 from error_code import get_error_msg
 
 ##########################################################
-Version = '4.01'
+Version = '4.02'
 Date = '2021/11/17'
 
 Start_time = (int)(time())
@@ -75,8 +75,13 @@ class PNL_data:
 
         self.log = Log('{}/log'.format(dir))
 
+        self.dir = dir
+
     def load(self):
-        with open('pnl/pnl.json', 'r') as file:
+        if not os.path.isfile('{}/pnl.json'.format(self.dir)):
+            return
+
+        with open('{}/pnl.json'.format(self.dir), 'r') as file:
             self.temp = json.load(file)
         try:
             self.closed_position = self.temp['closed_position']
@@ -108,19 +113,19 @@ class PNL_data:
             'current_balance' :  self.current_balance
         }
         
-        with open('pnl/pnl.json', 'w') as file:
+        with open('{}/pnl.json'.format(self.dir), 'w') as file:
             self.temp = json.dump(self.temp, file, indent = 4)
 
         del self.temp
 
     
     def record_balance(self):
-        if not os.path.isfile('pnl/balance.csv'):
-            with open('pnl/balance.csv', 'a', newline='') as file:
+        if not os.path.isfile('{}/balance.csv'.format(self.dir)):
+            with open('{}/balance.csv'.format(self.dir), 'a', newline='') as file:
                 writer = csv.writer(file)
                 writer.writerow(['time', 'balance'])
         
-        with open('pnl/balance.csv', 'a', newline='') as file:
+        with open('{}/balance.csv'.format(self.dir), 'a', newline='') as file:
             writer = csv.writer(file)
             writer.writerow([(int)(time()), self.current_balance])
                 
@@ -340,8 +345,7 @@ pnl = PNL_data('pnl')
 pnl.log.log('\n=============================START==============================')
 pnl.log.log('Bybit USDT perpetual trading bot ver {} {}'.format(Version, Date))
 
-if os.path.isfile('pnl/pnl.json'):
-    pnl.load()
+pnl.load()
 
 if pnl.start_balance != 'start':
     pnl.log.log('Start wallet balance: {}\n'.format(pnl.start_balance))
