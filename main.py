@@ -8,7 +8,6 @@ import os
 import json
 import gc
 import random
-random.seed()
 
 from Make_log import Log
 import Update_Symbol_List
@@ -370,7 +369,9 @@ else:
 
 
 while True:
-    try:        
+    try:      
+        random.seed()
+
         log.log_and_show(log.get_run_time(Start_time))
         # log cfg every loop
         log.log('\tVersion: {}\n\tRun on test net: {}\n\tOperate position: {}\n\tOperate USDT: {}\n'.format(cfg.version, cfg.Test_net, cfg.Max_operate_position, cfg.operate_USDT) +\
