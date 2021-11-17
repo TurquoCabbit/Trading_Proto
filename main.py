@@ -16,8 +16,8 @@ import Loading_animation
 from error_code import get_error_msg
 
 ##########################################################
-Version = '3.09'
-Date = '2021/11/16'
+Version = '3.10'
+Date = '2021/11/17'
 
 Start_time = (int)(time())
 
@@ -43,7 +43,7 @@ class Symbol:
 
 class Open:
     def __init__(self) -> None:
-        self.ID = 0
+        self.num = 0
         self.sym = ''
         self.price = 0
         self.side = ''
@@ -369,8 +369,8 @@ else:
             Symbol_List.append(Symbol(sym['name'], sym['price_filter']['tick_size'], sym['lot_size_filter']['qty_step']))
 
 
-while True:        
-    try:
+while True:
+    try:        
         log.log_and_show(log.get_run_time(Start_time))
         # log cfg every loop
         log.log('\tVersion: {}\n\tRun on test net: {}\n\tOperate position: {}\n\tOperate USDT: {}\n'.format(cfg.version, cfg.Test_net, cfg.Max_operate_position, cfg.operate_USDT) +\
@@ -536,18 +536,18 @@ while True:
             order = Open()
 
             # Random pick
-            order.ID = rand_symbol()
-            order.sym = Symbol_List[order.ID].symbol
+            order.num = rand_symbol()
+            order.sym = Symbol_List[order.num].symbol
             if cfg.side == 'Both':
                 order.side = rand_side()
             else:
                 order.side = cfg.side
 
             # Set Full Position TP/SL
-            if Symbol_List[order.ID].tpsl_mode != 'Full':
+            if Symbol_List[order.num].tpsl_mode != 'Full':
                 try:
                     temp = client.full_partial_position_tp_sl_switch(symbol = order.sym, tp_sl_mode = 'Full')
-                    Symbol_List[order.ID].tpsl_mode = 'Full'
+                    Symbol_List[order.num].tpsl_mode = 'Full'
                 except Exception as err:
                     err = str(err)
                     if not err.endswith('}.'):
@@ -558,7 +558,7 @@ while True:
                     match ret_code:
                         case _:
                             log.log('untrack_error_code')
-                            Symbol_List.pop(order.ID)
+                            Symbol_List.pop(order.num)
                             System_Msg('Remove {} from Symbol List'. format(order.sym))
                             del order
                             gc.collect()
@@ -566,12 +566,12 @@ while True:
                             continue
 
             # Switch to isolated margin mode and set leverage
-            if Symbol_List[order.ID].isolate != True:
+            if Symbol_List[order.num].isolate != True:
                 try:
                     temp = client.cross_isolated_margin_switch(symbol = order.sym, is_isolated = True,\
                                                                buy_leverage = cfg.Leverage, sell_leverage = cfg.Leverage)
-                    Symbol_List[order.ID].isolate = True
-                    Symbol_List[order.ID].leverage = cfg.Leverage
+                    Symbol_List[order.num].isolate = True
+                    Symbol_List[order.num].leverage = cfg.Leverage
                 except Exception as err:
                     err = str(err)
                     if not err.endswith('}.'):
@@ -582,7 +582,7 @@ while True:
                     match ret_code:
                         case _:
                             log.log('untrack_error_code')
-                            Symbol_List.pop(order.ID)
+                            Symbol_List.pop(order.num)
                             System_Msg('Remove {} from Symbol List'. format(order.sym))
                             del order
                             gc.collect()
@@ -590,10 +590,10 @@ while True:
                             continue
 
             # Modify leverage
-            if Symbol_List[order.ID].leverage != cfg.Leverage:
+            if Symbol_List[order.num].leverage != cfg.Leverage:
                 try:
                     temp = client.set_leverage(symbol = order.sym, buy_leverage = cfg.Leverage, sell_leverage = cfg.Leverage)
-                    Symbol_List[order.ID].leverage = cfg.Leverage
+                    Symbol_List[order.num].leverage = cfg.Leverage
                 except Exception as err:
                     err = str(err)
                     if not err.endswith('}.'):
@@ -604,7 +604,7 @@ while True:
                     match ret_code:
                         case _:
                             log.log('untrack_error_code')
-                            Symbol_List.pop(order.ID)
+                            Symbol_List.pop(order.num)
                             System_Msg('Remove {} from Symbol List'. format(order.sym))
                             del order
                             gc.collect()
@@ -625,7 +625,7 @@ while True:
                 match ret_code:
                     case _:
                         log.log('untrack_error_code')
-                        Symbol_List.pop(order.ID)
+                        Symbol_List.pop(order.num)
                         System_Msg('Remove {} from Symbol List'. format(order.sym))
                         del order
                         gc.collect()
@@ -633,31 +633,31 @@ while True:
                         continue
 
             # Calculate rough TP/SL and qty
-            order.qty = qty_trim((cfg.operate_USDT * cfg.Leverage / order.price), Symbol_List[order.ID].qty_step)
+            order.qty = qty_trim((cfg.operate_USDT * cfg.Leverage / order.price), Symbol_List[order.num].qty_step)
             if order.side == 'Buy':
-                order.TP = price_trim((1 + (cfg.TP_percentage / cfg.Leverage / 100)) * order.price, Symbol_List[order.ID].tick_size)
-                order.SL = price_trim((1 - (cfg.SL_percentage / cfg.Leverage / 100)) * order.price, Symbol_List[order.ID].tick_size, True)
+                order.TP = price_trim((1 + (cfg.TP_percentage / cfg.Leverage / 100)) * order.price, Symbol_List[order.num].tick_size)
+                order.SL = price_trim((1 - (cfg.SL_percentage / cfg.Leverage / 100)) * order.price, Symbol_List[order.num].tick_size, True)
             elif order.side == 'Sell':
-                order.TP = price_trim((1 - (cfg.TP_percentage / cfg.Leverage / 100)) * order.price, Symbol_List[order.ID].tick_size)
-                order.SL = price_trim((1 + (cfg.SL_percentage / cfg.Leverage / 100)) * order.price, Symbol_List[order.ID].tick_size, True)
+                order.TP = price_trim((1 - (cfg.TP_percentage / cfg.Leverage / 100)) * order.price, Symbol_List[order.num].tick_size)
+                order.SL = price_trim((1 + (cfg.SL_percentage / cfg.Leverage / 100)) * order.price, Symbol_List[order.num].tick_size, True)
             
             log.log_and_show('Opening {} {} {} order at about {}'.format(order.qty, order.sym, order.side, order.price))
 
             # Open order
             try:
-                order.posi = client.place_active_order(
-                                                        symbol = order.sym,\
-                                                        side = order.side,\
-                                                        order_type = "Market",\
-                                                        qty = order.qty,\
-                                                        time_in_force = "GoodTillCancel",\
-                                                        reduce_only = False,\
-                                                        close_on_trigger = False,\
-                                                        take_profit = order.TP,\
-                                                        stop_loss = order.SL
-                                                    )
-                if order.posi['ret_msg'] != 'OK':
-                    System_Msg('{} Order Create Successfully !!\nwith return msg: {}'.format(order.sym,order.posi['ret_msg']))
+                temp = client.place_active_order(
+                                                    symbol = order.sym,\
+                                                    side = order.side,\
+                                                    order_type = "Market",\
+                                                    qty = order.qty,\
+                                                    time_in_force = "GoodTillCancel",\
+                                                    reduce_only = False,\
+                                                    close_on_trigger = False,\
+                                                    take_profit = order.TP,\
+                                                    stop_loss = order.SL
+                                                )
+                if temp['ret_msg'] != 'OK':
+                    System_Msg('{} Order Create Successfully !!\nwith return msg: {}'.format(order.sym,temp['ret_msg']))
                 else:
                     log.log_and_show('{} Order Create Successfully !!'.format(order.sym))
 
@@ -672,7 +672,7 @@ while True:
                 Error_Msg('Open {} order Fail!!\n#{} : {}\n{}'.format(order.sym, ret_code, get_error_msg(ret_code), ret_note))
                 match ret_code:
                     case '130023':
-                        Symbol_List.pop(order.ID)
+                        Symbol_List.pop(order.num)
                         System_Msg('Remove {} from Symbol List'. format(order.sym))
                         del order
                         gc.collect()
@@ -687,7 +687,7 @@ while True:
                         continue
                     case _:
                         log.log('untrack_error_code')
-                        Symbol_List.pop(order.ID)
+                        Symbol_List.pop(order.num)
                         System_Msg('Remove {} from Symbol List'. format(order.sym))
                         del order
                         gc.collect()
@@ -703,15 +703,15 @@ while True:
                         if temp['result'][0]['size'] > 0:
                             order.price = (float)(temp['result'][0]['entry_price'])
                             # Calculate new TP/SL
-                            order.TP = price_trim((1 + (cfg.TP_percentage / cfg.Leverage / 100)) * order.price, Symbol_List[order.ID].tick_size)
-                            order.SL = price_trim((1 - (cfg.SL_percentage / cfg.Leverage / 100)) * order.price, Symbol_List[order.ID].tick_size, True)
+                            order.TP = price_trim((1 + (cfg.TP_percentage / cfg.Leverage / 100)) * order.price, Symbol_List[order.num].tick_size)
+                            order.SL = price_trim((1 - (cfg.SL_percentage / cfg.Leverage / 100)) * order.price, Symbol_List[order.num].tick_size, True)
                             break
                     elif order.side == 'Sell':
                         if temp['result'][1]['size'] > 0:
                             order.price = (float)(temp['result'][1]['entry_price'])
                             # Calculate new TP/SL
-                            order.TP = price_trim((1 - (cfg.TP_percentage / cfg.Leverage / 100)) * order.price, Symbol_List[order.ID].tick_size)
-                            order.SL = price_trim((1 + (cfg.SL_percentage / cfg.Leverage / 100)) * order.price, Symbol_List[order.ID].tick_size, True)
+                            order.TP = price_trim((1 - (cfg.TP_percentage / cfg.Leverage / 100)) * order.price, Symbol_List[order.num].tick_size)
+                            order.SL = price_trim((1 + (cfg.SL_percentage / cfg.Leverage / 100)) * order.price, Symbol_List[order.num].tick_size, True)
                             break
                     delay.delay(0.5)
                     retry -= 1
@@ -741,7 +741,7 @@ while True:
             # Calculate Trailing price
             try:
                 if cfg.Trailing_Stop != 0:
-                    order.trailing = price_trim(order.price * (cfg.Trailing_Stop / cfg.Leverage / 100), Symbol_List[order.ID].tick_size)
+                    order.trailing = price_trim(order.price * (cfg.Trailing_Stop / cfg.Leverage / 100), Symbol_List[order.num].tick_size)
 
                     # Set trailing stop
                     temp = client.set_trading_stop(symbol = order.sym, side = order.side, trailing_stop = order.trailing,\
