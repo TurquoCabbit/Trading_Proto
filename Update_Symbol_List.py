@@ -2,7 +2,6 @@ from pybit import HTTP
 import os
 import json
 
-import Make_log
 from error_code import get_error_msg
 
 Symbol_list_ver = 'A'
@@ -49,10 +48,6 @@ def Query_USDT_Perpetual_Symbol(testnet = 0):
     return False
 
 if __name__ == '__main__':
-    ### init log
-    log = Make_log.Log('')
-    log.log_and_show('========================START=========================')
-
     Query_USDT_Perpetual_Symbol()
 
     print('Query all USDT Perpetual Symbol done!!')
