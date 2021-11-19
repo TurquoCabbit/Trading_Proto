@@ -1,8 +1,7 @@
-from posix import EX_CANTCREAT
 from pybit import HTTP
 import os
+from datetime import datetime
 
-from main import Error_Msg, System_Msg
 from Make_log import Log
 from error_code import get_error_msg
 
@@ -16,9 +15,17 @@ class Client:
         if not err.endswith(self.pybit_except_ending):
             raise Exception(err)
 
+    def Error_Msg(self, str = ''):
+        self.log.log(str)
+        str = str.split('\n')
+
+        for i in str:
+            os.system('echo [31m{} : {}'.format(datetime.now().strftime('%H:%M:%S'), i))        
+        os.system('echo [0m{} :'.format(datetime.now().strftime('%H:%M:%S')))
+
     def get_wallet_balance(self, coin = "USDT"):
         try:
-            return self.client.get_wallet_balance(coin = coin)
+            return self.client.get_wallet_balance(coin = coin)['result'][coin]
         except Exception as err:
             err = str(err)
             #if not err.endswith(self.pybit_except_ending):
@@ -26,7 +33,7 @@ class Client:
             self.error_msg_check(err)
             ret_code = err.split('(ErrCode: ')[1].split(')')[0]
             ret_note = err.split('(ErrCode: ')[0]
-            Error_Msg('Get wallet balance Fail!!\n#{} : {}\n{}'.format(ret_code, get_error_msg(ret_code), ret_note))
+            self.Error_Msg('Get wallet balance Fail!!\n#{} : {}\n{}'.format(ret_code, get_error_msg(ret_code), ret_note))
             match ret_code:
                 case '10003':   # invalid api_key 
                     os.system('pause')
@@ -35,9 +42,9 @@ class Client:
                     self.log.log('untrack_error_code')
                     return False
 
-    def get_all_position(self):
+    def get_all_position(self, endpoint = '/private/linear/position/list'):
         try:
-            return self.client.my_position(endpoint = '/private/linear/position/list')
+            return self.client.my_position(endpoint = endpoint)
         except Exception as err:
             err = str(err)
             #if not err.endswith(self.pybit_except_ending):
@@ -45,16 +52,23 @@ class Client:
             self.error_msg_check(err)
             ret_code = err.split('(ErrCode: ')[1].split(')')[0]
             ret_note = err.split('(ErrCode: ')[0]
-            Error_Msg('Query Position Fail!!\n#{} : {}\n{}'.format(ret_code, get_error_msg(ret_code), ret_note))
+            self.Error_Msg('Query Position Fail!!\n#{} : {}\n{}'.format(ret_code, get_error_msg(ret_code), ret_note))
             match ret_code:
                 case _:
                     self.log.log('untrack_error_code')
                     os.system('pause')
                     os._exit(0)
 
-    def get_sym_position(self, symbol):
+    def get_entry_price(self, symbol, side):
         try:
-            return self.client.my_position(symbol = symbol)
+            rc = self.client.my_position(symbol = symbol)['result']
+            if side == 'Buy' and rc[0]['side'] == side and rc[0]['size'] > 0:
+                return rc[0]['entry_price']
+            elif side == 'Sell' and rc[1]['side'] == side and rc[1]['size'] > 0:
+                return rc[1]['entry_price']
+            else:
+                self.Error_Msg('Get {} position entry price Fail!!\nData not match'.format(symbol))
+                return False
         except Exception as err:
             err = str(err)
             #if not err.endswith(self.pybit_except_ending):
@@ -62,7 +76,7 @@ class Client:
             self.error_msg_check(err)
             ret_code = err.split('(ErrCode: ')[1].split(')')[0]
             ret_note = err.split('(ErrCode: ')[0]
-            Error_Msg('Get {} position entry price Fail!!\n#{} : {}\n{}'.format(symbol, ret_code, get_error_msg(ret_code), ret_note))
+            self.Error_Msg('Get {} position entry price Fail!!\n#{} : {}\n{}'.format(symbol, ret_code, get_error_msg(ret_code), ret_note))
             match ret_code:
                 case _:
                     self.log.log('untrack_error_code')
@@ -78,13 +92,13 @@ class Client:
             self.error_msg_check(err)
             ret_code = err.split('(ErrCode: ')[1].split(')')[0]
             ret_note = err.split('(ErrCode: ')[0]
-            Error_Msg('Get {} closed pnl Fail!!\n#{} : {}\n{}'.format(symbol, ret_code, get_error_msg(ret_code), ret_note))
+            self.Error_Msg('Get {} closed pnl Fail!!\n#{} : {}\n{}'.format(symbol, ret_code, get_error_msg(ret_code), ret_note))
             match ret_code:
                 case _:
                     self.log.log('untrack_error_code')
                     return False
 
-    def set_tpsl_mode(self, symbol, mode):
+    def set_tpsl_mode(self, symbol, mode = 'Full'):
         try:
             self.client.full_partial_position_tp_sl_switch(symbol = symbol, tp_sl_mode = mode)
             return True
@@ -95,7 +109,7 @@ class Client:
             self.error_msg_check(err)
             ret_code = err.split('(ErrCode: ')[1].split(')')[0]
             ret_note = err.split('(ErrCode: ')[0]
-            Error_Msg('Set {} TPSL mode Fail!!\n#{} : {}\n{}'.format(symbol, ret_code, get_error_msg(ret_code), ret_note))
+            self.Error_Msg('Set {} TPSL mode Fail!!\n#{} : {}\n{}'.format(symbol, ret_code, get_error_msg(ret_code), ret_note))
             match ret_code:
                 case _:
                     self.log.log('untrack_error_code')
@@ -113,7 +127,7 @@ class Client:
             self.error_msg_check(err)
             ret_code = err.split('(ErrCode: ')[1].split(')')[0]
             ret_note = err.split('(ErrCode: ')[0]
-            Error_Msg('Set {} margin mode Fail!!\n#{} : {}\n{}'.format(symbol, ret_code, get_error_msg(ret_code), ret_note))
+            self.Error_Msg('Set {} margin mode Fail!!\n#{} : {}\n{}'.format(symbol, ret_code, get_error_msg(ret_code), ret_note))
             match ret_code:
                 case _:
                     self.log.log('untrack_error_code')
@@ -130,7 +144,7 @@ class Client:
             self.error_msg_check(err)
             ret_code = err.split('(ErrCode: ')[1].split(')')[0]
             ret_note = err.split('(ErrCode: ')[0]
-            Error_Msg('Set {} leverage Fail!!\n#{} : {}\n{}'.format(symbol, ret_code, get_error_msg(ret_code), ret_note))
+            self.Error_Msg('Set {} leverage Fail!!\n#{} : {}\n{}'.format(symbol, ret_code, get_error_msg(ret_code), ret_note))
             match ret_code:
                 case _:
                     self.log.log('untrack_error_code')
@@ -146,7 +160,7 @@ class Client:
             self.error_msg_check(err)
             ret_code = err.split('(ErrCode: ')[1].split(')')[0]
             ret_note = err.split('(ErrCode: ')[0]
-            Error_Msg('Get {} price Fail!!\n#{} : {}\n{}'.format(symbol, ret_code, get_error_msg(ret_code), ret_note))
+            self.Error_Msg('Get {} price Fail!!\n#{} : {}\n{}'.format(symbol, ret_code, get_error_msg(ret_code), ret_note))
             match ret_code:
                 case _:
                     self.log.log('untrack_error_code')
@@ -172,7 +186,7 @@ class Client:
             self.error_msg_check(err)
             ret_code = err.split('(ErrCode: ')[1].split(')')[0]
             ret_note = err.split('(ErrCode: ')[0]
-            Error_Msg('Open {} order Fail!!\n#{} : {}\n{}'.format(symbol, ret_code, get_error_msg(ret_code), ret_note))
+            self.Error_Msg('Open {} order Fail!!\n#{} : {}\n{}'.format(symbol, ret_code, get_error_msg(ret_code), ret_note))
             match ret_code:
                 case '130023':
                     return ret_code
@@ -192,7 +206,7 @@ class Client:
             self.error_msg_check(err)
             ret_code = err.split('(ErrCode: ')[1].split(')')[0]
             ret_note = err.split('(ErrCode: ')[0]
-            Error_Msg('Get {} lasted opened order Fail!!\n#{} : {}\n{}'.format(order.sym, ret_code, get_error_msg(ret_code), ret_note))
+            self.Error_Msg('Get {} lasted opened order Fail!!\n#{} : {}\n{}'.format(order.sym, ret_code, get_error_msg(ret_code), ret_note))
             match ret_code:
                 case _:
                     self.log.log('untrack_error_code')
@@ -215,11 +229,32 @@ class Client:
             self.error_msg_check(err)
             ret_code = err.split('(ErrCode: ')[1].split(')')[0]
             ret_note = err.split('(ErrCode: ')[0]
-            Error_Msg('Set {} trailing and fine tune TPSL Fail!!\n#{} : {}\n{}'.format(order.sym, ret_code, get_error_msg(ret_code), ret_note))
+            self.Error_Msg('Set {} trailing and fine tune TPSL Fail!!\n#{} : {}\n{}'.format(order.sym, ret_code, get_error_msg(ret_code), ret_note))
             match ret_code:
                 case _:
                     self.log.log('untrack_error_code')
                     return False
-        
+
+    def set_TPSL(self, symbol, side, TP, SL, trigger):
+        try:
+            self.client.set_trading_stop(symbol = symbol,\
+                                         side = side,\
+                                         take_profit = TP,\
+                                         stop_loss = SL,\
+                                         tp_trigger_by = trigger,\
+                                         sl_trigger_by = trigger)
+            return True
+        except Exception as err:
+            err = str(err)
+            #if not err.endswith(self.pybit_except_ending):
+            # raise Exception(err)
+            self.error_msg_check(err)
+            ret_code = err.split('(ErrCode: ')[1].split(')')[0]
+            ret_note = err.split('(ErrCode: ')[0]
+            self.Error_Msg('{} fine tune TPSL Fail!!\n#{} : {}\n{}'.format(order.sym, ret_code, get_error_msg(ret_code), ret_note))
+            match ret_code:
+                case _:
+                    self.log.log('untrack_error_code')
+                    return False
 
         
