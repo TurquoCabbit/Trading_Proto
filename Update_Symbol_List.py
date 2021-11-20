@@ -48,8 +48,9 @@ def Query_USDT_Perpetual_Symbol(testnet = 0):
     return False
 
 if __name__ == '__main__':
-    Query_USDT_Perpetual_Symbol()
-
-    print('Query all USDT Perpetual Symbol done!!')
-    os.system('pause')
+    try:
+        Query_USDT_Perpetual_Symbol()
+    except Exception as err:
+        print(str(err))
+        os.system('pause')
     os._exit(0)
