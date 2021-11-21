@@ -15,8 +15,8 @@ import Loading_animation
 from client import Client
 
 ##########################################################
-Version = '4.99'
-Date = '2021/11/19'
+Version = '4.999'
+Date = '2021/11/21'
 
 Start_time = (int)(time())
 
@@ -387,12 +387,11 @@ if __name__ == '__main__':
             if i in Symbol_query['name'] and not i in cfg.Black_list:
                 sym = Symbol_query['data'][Symbol_query['name'].index(i)]
                 Symbol_List.append(Symbol(sym['name'], sym['price_filter']['tick_size'], sym['lot_size_filter']['qty_step']))
-
+    
+    del Symbol_query
 
     while True:
-        try:      
-            random.seed()
-
+        try:
             log.log_and_show(log.get_run_time(Start_time))
 
             ### Check if eligible symbol qty exceed max operated qty
@@ -521,6 +520,7 @@ if __name__ == '__main__':
             
             ### Randonly open position
             if not Pause_place_order and current_position_qty < cfg.Max_operate_position:
+                random.seed()
                 order = Open()
 
                 # Random pick
