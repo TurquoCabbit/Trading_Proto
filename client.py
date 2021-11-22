@@ -166,19 +166,43 @@ class Client:
                     self.log.log('untrack_error_code')
                     return False
 
-    def place_order(self, symbol, side, qty, TP, SL):
+    def place_order(self, symbol, side, qty, TP, SL, close = False):
         try:
-            return self.client.place_active_order(
-                                                symbol = symbol,\
-                                                side = side,\
-                                                order_type = "Market",\
-                                                qty = qty,\
-                                                time_in_force = "GoodTillCancel",\
-                                                reduce_only = False,\
-                                                close_on_trigger = False,\
-                                                take_profit = TP,\
-                                                stop_loss = SL
-                                            )
+            if close == False:
+                # open a position
+                return self.client.place_active_order(
+                                                    symbol = symbol,\
+                                                    side = side,\
+                                                    order_type = "Market",\
+                                                    qty = qty,\
+                                                    time_in_force = "GoodTillCancel",\
+                                                    reduce_only = False,\
+                                                    close_on_trigger = False,\
+                                                    take_profit = TP,\
+                                                    stop_loss = SL
+                                                )
+            elif close == True:
+                #close a exist position
+                if side == 'Buy':
+                    side = 'Sell'
+                elif side == 'Sell':
+                    side = 'Buy'
+                else:
+                    raise Exception('fuction parameter error')
+
+                return self.client.place_active_order(
+                                                    symbol = symbol,\
+                                                    side = side,\
+                                                    order_type = "Market",\
+                                                    qty = qty,\
+                                                    time_in_force = "GoodTillCancel",\
+                                                    reduce_only = True,\
+                                                    close_on_trigger = False
+                                                )
+
+
+            else:
+                raise Exception('fuction parameter error')
         except Exception as err:
             err = str(err)
             #if not err.endswith(self.pybit_except_ending):
