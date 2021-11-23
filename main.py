@@ -15,7 +15,7 @@ import Loading_animation
 from client import Client
 
 ##########################################################
-Version = '5.03'
+Version = '5.04'
 Date = '2021/11/23'
 
 Start_time = (int)(time())
@@ -448,9 +448,9 @@ def main():
             pnl.write_pnl()
             pnl.record_balance()
             
-            log.log_and_show('Start wallet balance:\t{: .2f}\tUSDT\n'.format(pnl.start_balance) +\
-                                'Balance available:\t\t{: .2f}\tUSDT\nBalance equity:\t\t{: .2f}\tUSDT\n'.format(wallet_available, wallet_equity) +\
-                                'Unrealized pnl:\t\t{: .2f}\tUSDT, {: .2f}%\nWin rate:\t\t\t{: .2f}\t%'.format(pnl.total_pnl, pnl.total_pnl_rate, pnl.win_rate))
+            log.log_and_show('Start wallet balance: {: 13.2f}\tUSDT\n'.format(pnl.start_balance) +\
+                             'Balance available:\t {: 13.2f}\tUSDT\nBalance equity:\t {: 13.2f}\tUSDT\n'.format(wallet_available, wallet_equity) +\
+                             'Unrealized pnl:\t {: 13.2f}\tUSDT, {: .2f}%\nWin rate:\t\t\t{: .2f}\t%'.format(pnl.total_pnl, pnl.total_pnl_rate, pnl.win_rate))
             log.show('')
 
             if wallet_available < cfg.stop_operate_USDT:
@@ -521,6 +521,8 @@ def main():
                 for i in pnl.track_list:
                     if not 'time' in pnl.track_list[i]:
                         pnl.track_list[i]['time'] = int(time())
+                    if not 'pressed' in pnl.track_list[i]:
+                        pnl.track_list[i]['pressed'] = False
 
             if len(opened_position) >= cfg.Max_operate_position:
                 # position opening done start track
@@ -535,7 +537,7 @@ def main():
                     posi_pnl = Position_List[i][pnl.track_list[i]['side']]['unrealised_pnl']\
                                 / (Position_List[i][pnl.track_list[i]['side']]['position_margin'] + Position_List[i][pnl.track_list[i]['side']]['occ_closing_fee']) * 100
                     # position still going
-                    if cfg.position_expire_time != 0 and time() - pnl.track_list[i]['time'] > cfg.position_expire_time:
+                    if cfg.position_expire_time != 0 and (time() - pnl.track_list[i]['time']) > cfg.position_expire_time:
                         # position expire if position_expire_time had set, check pnl
                         if posi_pnl < cfg.position_expire_thres:
                             # pnl lesser than threshold, start closaing it
@@ -594,7 +596,7 @@ def main():
                             pnl.track_list[i]['time'] = int(time())
 
                         
-                    if cfg.press_the_winned_USDT > 0 and posi_pnl > cfg.press_the_winned_thres:
+                    if cfg.press_the_winned_USDT > 0 and pnl.track_list[i]['pressed'] and posi_pnl > cfg.press_the_winned_thres:
                         # position still going and need to press the win
                         if not Pause_place_order:
                             log.log_and_show('Add {}\tUSDT to {}\t{} position'.format(cfg.press_the_winned_USDT, i,  pnl.track_list[i]['side']))
@@ -657,6 +659,7 @@ def main():
                             del place_order
                             collect()
                             delete_list.append(i)
+                            pnl.track_list[i]['pressed'] = True
                         
                         else:
                             log.log_and_show('Under balance for press the winned', format(i, pnl.track_list[i]['side']))
@@ -691,7 +694,7 @@ def main():
         
         if pnl.start_track_pnl:
             for i in pnl.track_list:
-                log.show('\t{} \t{}\t{: .2f}%\t{}'.format(i, pnl.track_list[i]['side'], pnl.track_list[i]['pnl'], timestamp_format(pnl.track_list[i]['time'])))
+                log.show('\t{} \t{}\t{: .2f}% \t{}'.format(i, pnl.track_list[i]['side'], pnl.track_list[i]['pnl'], timestamp_format(pnl.track_list[i]['time'])))
         log.show('')
         
         ### Randonly open position
@@ -788,7 +791,7 @@ def main():
                     log.log_and_show('{} open order create successfully !!'.format(order.sym))
 
                 order.order_id = place_order['result']['order_id']
-                pnl.track_list[order.sym] = {'time' : int(time()), 'side' : order.side}
+                pnl.track_list[order.sym] = {'time' : int(time()), 'side' : order.side, 'pressed' : False}
                 pnl.write_position_list()
                 del place_order
 
