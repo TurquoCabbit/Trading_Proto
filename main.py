@@ -15,7 +15,7 @@ import Loading_animation
 from client import Client
 
 ##########################################################
-Version = '5.01'
+Version = '5.02'
 Date = '2021/11/23'
 
 Start_time = (int)(time())
@@ -299,7 +299,7 @@ def price_trim(price, tick):
 def timestamp_format(stamp, format = '%H:%M:%S %Y-%m-%d'):
     return strftime(format, localtime(stamp))
 
-if __name__ == '__main__':
+def main():
     ##############################################################################################################################
     ### Load Cfg File
     cfg = CFG(Version)
@@ -351,9 +351,10 @@ if __name__ == '__main__':
 
     log.log('cfg.json loaded')
     log.log('\tVersion: {}\n\tRun on test net: {}\n\tOperate position: {}\n\tOperate USDT: {}\n'.format(cfg.version, cfg.Test_net, cfg.Max_operate_position, cfg.operate_USDT) +\
-            '\tStop_operate_USDT: {}\n\tPress_the_winned_USDT: {}\n\tpress_the_winned_thres: {}\n'.format(cfg.stop_operate_USDT, cfg.press_the_winned_USDT, cfg.press_the_winned_thres) +\
+            '\tStop_operate_USDT: {}\n\tPress_the_winned_USDT: {}\n\tPress_the_winned_thres_percentag: {}\n'.format(cfg.stop_operate_USDT, cfg.press_the_winned_USDT, cfg.press_the_winned_thres) +\
             '\tLeverage: {}\n\tOperate side: {}\n\tTP: {}%\n\tSL: {}%\n'.format(cfg.Leverage, cfg.side, cfg.TP_percentage, cfg.SL_percentage) +\
             '\tTPSL trigger: {}\n\tTrailing stop: {}%\n'.format(cfg.Trigger, cfg.Trailing_Stop) +\
+            '\tPosition_expire_time: {}\n\tPosition_expire_thres_percentag: {}\n'.format(cfg.position_expire_time, cfg.position_expire_thres) +\
             '\tOperate group: {}\n\tOpen order interval: {}s\n\tPolling interval: {}s'.format(cfg.Group, cfg.open_order_interval, cfg.poll_order_interval))
 
     ##############################################################################################################################
@@ -418,7 +419,6 @@ if __name__ == '__main__':
     del Symbol_query
 
     while True:
-        # try:
         log.log_and_show(log.get_run_time(Start_time))
 
         ### Check if eligible symbol qty exceed max operated qty
@@ -589,7 +589,6 @@ if __name__ == '__main__':
                             del place_order
                             collect()
                             delete_list.append(i)
-                            Print_and_pause()
                         else:
                             # pnl larger than threshold, record time
                             pnl.track_list[i]['time'] = int(time())
@@ -598,7 +597,7 @@ if __name__ == '__main__':
                     if cfg.press_the_winned_USDT > 0 and posi_pnl > cfg.press_the_winned_thres:
                         # position still going and need to press the win
                         if not Pause_place_order:
-                            log.log_and_show('Add {}\tUSDT to {}\t{} position'.format(cfg.press_the_winned_USDTi, pnl.track_list[i]['side']))
+                            log.log_and_show('Add {}\tUSDT to {}\t{} position'.format(cfg.press_the_winned_USDT, i,  pnl.track_list[i]['side']))
                             # get symbol last price
                             price = client.get_last_price(i)
                             if price == False:
@@ -608,7 +607,7 @@ if __name__ == '__main__':
                             qty = qty_trim((cfg.press_the_winned_USDT * cfg.Leverage / price), Symbol_List[i]['qty_step'])
                             del price
 
-                            place_order = client.place_order(i, pnl.track_list[i]['side'], qty, pnl.track_list[i]['take_profit'], pnl.track_list[i]['stop_loss'])
+                            place_order = client.place_order(i, pnl.track_list[i]['side'], qty, Position_List[i][pnl.track_list[i]['side']]['take_profit'], Position_List[i][pnl.track_list[i]['side']]['stop_loss'])
                             if place_order == False or place_order == '130023':
                                 # Will lqt right after position placed
                                 del place_order
@@ -878,8 +877,13 @@ if __name__ == '__main__':
             delay.anima_runtime(cfg.poll_order_interval, Start_time)
 
 
-        # except Exception as Err:
-        #     log.show('')
-        #     Error_Msg((str)(Err))
-        #     os.system('pause')
-        #     os._exit(0)
+if __name__ == '__main__':
+        try:
+            main()
+        except Exception as Err:
+            log.show('')
+            Error_Msg((str)(Err))
+            os.system('pause')
+            os._exit(0)
+
+        # main()
