@@ -15,7 +15,7 @@ import Loading_animation
 from client import Client
 
 ##########################################################
-Version = '5.00'
+Version = '5.01'
 Date = '2021/11/23'
 
 Start_time = (int)(time())
@@ -218,7 +218,7 @@ class CFG:
             return True
         
         except KeyError:
-            self.archive_cfg('cfg.json corrupted, old one archive as cfg_{}.json'.format(strftime('%Y%m%d-%H;%M;%S', localtime(os.path.getmtime('cfg.json')))))
+            self.archive_cfg('cfg.json corrupted, old one archive as cfg_{}.json'.format(timestamp_format(os.path.getmtime('cfg.json'), '%Y%m%d-%H;%M;%S')))
     
     def update_version(self):
         self.version = Version
@@ -227,10 +227,10 @@ class CFG:
             json.dump(self.cfg, file, indent = 4)
     
     def upgrade_cfg(self):
-        System_Msg('cfg.json upgraded, old one archive as cfg_{}.json'.format(strftime('%Y%m%d-%H;%M;%S', localtime(os.path.getmtime('cfg.json')))))
+        System_Msg('cfg.json upgraded, old one archive as cfg_{}.json'.format(timestamp_format(os.path.getmtime('cfg.json'), '%Y%m%d-%H;%M;%S')))
         if not os.path.isdir('archive'):
             os.mkdir('archive')
-        os.rename('cfg.json', 'archive/cfg_{}.json'.format(strftime('%Y%m%d-%H;%M;%S', localtime(os.path.getmtime('cfg.json')))))
+        os.rename('cfg.json', 'archive/cfg_{}.json'.format(timestamp_format(os.path.getmtime('cfg.json'), '%Y%m%d-%H;%M;%S')))
 
         for i in self.cfg_init:
             if not i in self.cfg:
@@ -242,7 +242,7 @@ class CFG:
         System_Msg(msg)
         if not os.path.isdir('archive'):
             os.mkdir('archive')
-        os.rename('cfg.json', 'archive/cfg_{}.json'.format(strftime('%Y%m%d-%H;%M;%S', localtime(os.path.getmtime('cfg.json')))))
+        os.rename('cfg.json', 'archive/cfg_{}.json'.format(timestamp_format(os.path.getmtime('cfg.json'), '%Y%m%d-%H;%M;%S')))
         self.new_cfg()
         log.log_and_show('Generate new cfg.json')
         os.system('pause')
@@ -295,6 +295,9 @@ def price_trim(price, tick):
     
     price -= price % tick    
     return price / pow(10, digi)
+
+def timestamp_format(stamp, format = '%H:%M:%S %Y-%m-%d'):
+    return strftime(format, localtime(stamp))
 
 if __name__ == '__main__':
     ##############################################################################################################################
@@ -690,7 +693,7 @@ if __name__ == '__main__':
         
         if pnl.start_track_pnl:
             for i in pnl.track_list:
-                log.show('\t{} \t{}\t{: .2f}%\t{}s'.format(i, pnl.track_list[i]['side'], pnl.track_list[i]['pnl'], int(time() - pnl.track_list[i]['time'])))
+                log.show('\t{} \t{}\t{: .2f}%\t{}'.format(i, pnl.track_list[i]['side'], pnl.track_list[i]['pnl'], timestamp_format(pnl.track_list[i]['time'])))
         log.show('')
         
         ### Randonly open position
