@@ -8,6 +8,8 @@ import json
 from gc import collect
 import random
 import csv
+from shutil import rmtree
+from shutil import copytree
 
 from Make_log import Log
 import Update_Symbol_List
@@ -15,7 +17,7 @@ import Loading_animation
 from client import Client
 
 ##########################################################
-Version = '5.04'
+Version = '5.05'
 Date = '2021/11/23'
 
 Start_time = (int)(time())
@@ -359,6 +361,13 @@ def main():
 
     ##############################################################################################################################
     ### Load history pnl data and init log
+    if len(sys.argv) > 3 and sys.argv[3] == '-R':
+        if os.path.isdir('pnl'):
+            if not os.path.isdir('archive'):
+                os.mkdir('archive')
+            copytree('pnl', 'archive/pnl_{}'.format(timestamp_format(os.path.getmtime('pnl/balance.csv'), '%Y%m%d-%H;%M;%S')))
+            rmtree('pnl')
+    
     pnl = PNL_data('pnl')
     pnl.load()
     ##############################################################################################################################
@@ -378,7 +387,7 @@ def main():
 
     ##############################################################################################################################
     ### Create client
-    if len(sys.argv) == 3:
+    if len(sys.argv) >= 3:
         if cfg.Test_net:
             # main net api and serect were passed
             log.log('Run on Test Net !!!')
@@ -389,7 +398,7 @@ def main():
             client = Client('https://api.bybit.com', api_key=sys.argv[1], api_secret=sys.argv[2])
     else:
         log.show('Execution cmd :')
-        log.show('main.exe <api key> <api secret>')
+        log.show('main.exe <api key> <api secret> <-R : restart pnl record>')
         os.system('pause')
         os._exit(0)
 

@@ -230,7 +230,7 @@ class Client:
             self.error_msg_check(err)
             ret_code = err.split('(ErrCode: ')[1].split(')')[0]
             ret_note = err.split('(ErrCode: ')[0]
-            self.Error_Msg('Get {} lasted opened order Fail!!\n#{} : {}\n{}'.format(order.sym, ret_code, get_error_msg(ret_code), ret_note))
+            self.Error_Msg('Get {} lasted opened order Fail!!\n#{} : {}\n{}'.format(symbol, ret_code, get_error_msg(ret_code), ret_note))
             match ret_code:
                 case _:
                     self.log.log('untrack_error_code')
@@ -253,7 +253,7 @@ class Client:
             self.error_msg_check(err)
             ret_code = err.split('(ErrCode: ')[1].split(')')[0]
             ret_note = err.split('(ErrCode: ')[0]
-            self.Error_Msg('Set {} trailing and fine tune TPSL Fail!!\n#{} : {}\n{}'.format(order.sym, ret_code, get_error_msg(ret_code), ret_note))
+            self.Error_Msg('Set {} trailing and fine tune TPSL Fail!!\n#{} : {}\n{}'.format(symbol, ret_code, get_error_msg(ret_code), ret_note))
             match ret_code:
                 case _:
                     self.log.log('untrack_error_code')
@@ -275,7 +275,7 @@ class Client:
             self.error_msg_check(err)
             ret_code = err.split('(ErrCode: ')[1].split(')')[0]
             ret_note = err.split('(ErrCode: ')[0]
-            self.Error_Msg('{} fine tune TPSL Fail!!\n#{} : {}\n{}'.format(order.sym, ret_code, get_error_msg(ret_code), ret_note))
+            self.Error_Msg('{} fine tune TPSL Fail!!\n#{} : {}\n{}'.format(symbol, ret_code, get_error_msg(ret_code), ret_note))
             match ret_code:
                 case _:
                     self.log.log('untrack_error_code')
