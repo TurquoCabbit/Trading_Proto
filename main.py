@@ -15,7 +15,7 @@ import Loading_animation
 from client import Client
 
 ##########################################################
-Version = '5.02'
+Version = '5.03'
 Date = '2021/11/23'
 
 Start_time = (int)(time())
@@ -652,12 +652,11 @@ def main():
                                 continue
                             del retry
 
-                            log.log_and_show('Preaa {}\t{} position successfully !!'.format(i, pnl.track_list[i]['side']))
+                            log.log_and_show('Press {}\t{} position successfully !!'.format(i, pnl.track_list[i]['side']))
                             del order_status
                             del place_order
                             collect()
                             delete_list.append(i)
-                            Print_and_pause()
                         
                         else:
                             log.log_and_show('Under balance for press the winned', format(i, pnl.track_list[i]['side']))
