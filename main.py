@@ -18,12 +18,13 @@ from Loading_animation import delay_anima
 from client import Client
 
 ##########################################################
-Version = '5.07'
+Version = '6.00'
 Date = '2021/11/24'
 
 Start_time = int(time())
 
 Symbol_List = {}
+Detention_List = {}
 
 delay = delay_anima()
 
@@ -147,6 +148,7 @@ class CFG:
         self.Group = None
         self.open_order_interval = None
         self.poll_order_interval = None
+        self.detention_time = None
         self.Token_list = []
         self.Black_list = []
         
@@ -169,6 +171,7 @@ class CFG:
                             'Opreate_group' : 'all',
                             'Open_interval' : 1,
                             'Poll_interval' : 60,
+                            'Detention_time' : 86400,
                             'Black_list' : [],
                             'Group_0' : [
                                 'BTC',  'ETH',  'DOT',  'SOL',
@@ -208,6 +211,7 @@ class CFG:
             self.Group = self.cfg['Opreate_group']
             self.open_order_interval = abs(self.cfg['Open_interval'])
             self.poll_order_interval = abs(self.cfg['Poll_interval'])
+            self.detention_time = abs(self.cfg['Detention_time'])
             self.Black_list.clear()
             for i in self.cfg['Black_list']:
                 self.Black_list.append('{}USDT'.format(i))
@@ -332,6 +336,20 @@ def argv_check():
                 case _:
                     continue    
 
+def detention_release(Detention_time = 86400):
+    if len(Detention_List) == 0:
+        return
+    release = []
+    for i in Detention_List:
+        if int(time()) - Detention_List[i]['time'] > Detention_time:
+            # detention time pass, release back to Symbol_List
+            Symbol_List[i] = Detention_List[i]['data']
+            release.append(i)
+    
+    for i in release:
+        del Detention_List[i]
+    del release
+
 def main():
     argv_check()
     ##############################################################################################################################
@@ -383,11 +401,12 @@ def main():
     
     log.log('cfg.json loaded')
     log.log('\tVersion: {}\n\tRun on test net: {}\n\tOperate position: {}\n\tOperate USDT: {}\n'.format(cfg.version, cfg.Test_net, cfg.Max_operate_position, cfg.operate_USDT) +\
-            '\tStop_operate_USDT: {}\n\tPress_the_winned_USDT: {}\n\tPress_the_winned_thres_percentag: {}\n'.format(cfg.stop_operate_USDT, cfg.press_the_winned_USDT, cfg.press_the_winned_thres) +\
+            '\tStop_operate_USDT: {}\n\tPress_the_winned_USDT: {}\n\tPress_the_winned_thres_percentag: {}%\n'.format(cfg.stop_operate_USDT, cfg.press_the_winned_USDT, cfg.press_the_winned_thres) +\
             '\tLeverage: {}\n\tOperate side: {}\n\tTP: {}%\n\tSL: {}%\n'.format(cfg.Leverage, cfg.side, cfg.TP_percentage, cfg.SL_percentage) +\
             '\tTPSL trigger: {}\n\tTrailing stop: {}%\n'.format(cfg.Trigger, cfg.Trailing_Stop) +\
-            '\tPosition_expire_time: {}\n\tPosition_expire_thres_percentag: {}\n'.format(cfg.position_expire_time, cfg.position_expire_thres) +\
-            '\tOperate group: {}\n\tOpen order interval: {}s\n\tPolling interval: {}s'.format(cfg.Group, cfg.open_order_interval, cfg.poll_order_interval))
+            '\tPosition_expire_time: {}s\n\tPosition_expire_thres_percentag: {}%\n'.format(cfg.position_expire_time, cfg.position_expire_thres) +\
+            '\tOperate group: {}\n\tOpen order interval: {}s\n\tPolling interval: {}s\n'.format(cfg.Group, cfg.open_order_interval, cfg.poll_order_interval) +\
+            '\tDetention_time: {}s'.format(cfg.detention_time))
 
     ##############################################################################################################################
     ### Load history pnl data and init log    
@@ -489,7 +508,7 @@ def main():
         ### Query current position
         current_position_qty = 0
         current_position_buy = 0
-        current_position_sel = 0
+        current_position_sell = 0
         Position_List = {}
         opened_position = {}
         
@@ -526,13 +545,9 @@ def main():
                 temp['tpsl_mode'] = 'Partial'
             
             if Position_List[i]['Buy']['position_value'] > 0:
-                current_position_qty += 1
-                current_position_buy += 1
                 temp['opened'] = True
                 opened_position[i] = {'side' : 'Buy'}
             elif Position_List[i]['Sell']['position_value'] > 0:
-                current_position_qty += 1
-                current_position_sel += 1
                 temp['opened'] = True
                 opened_position[i] = {'side' : 'Sell'}
             else:
@@ -714,10 +729,17 @@ def main():
         del Position_List
         collect()
 
+        current_position_qty = len(pnl.track_list)
+        for i in pnl.track_list:
+            if pnl.track_list[i]['side'] == 'Buy':
+                current_position_buy += 1
+            elif pnl.track_list[i]['side'] == 'Sell':
+                current_position_sell += 1
+
         pnl.write_pnl()
         pnl.write_position_list()
         
-        log.log_and_show('Opened Position: {}\tBuy: {} Sell: {}'.format(current_position_qty, current_position_buy, current_position_sel))
+        log.log_and_show('Opened Position: {}\tBuy: {} Sell: {}'.format(current_position_qty, current_position_buy, current_position_sell))
         
         if pnl.start_track_pnl:
             for i in pnl.track_list:
@@ -740,7 +762,7 @@ def main():
                 if client.set_tpsl_mode(order.sym) == True:
                     Symbol_List[order.sym]['tpsl_mode'] = 'Full'
                 else:
-                    del Symbol_List[order.sym]
+                    Detention_List[order.sym] = {'data' : Symbol_List.pop(order.sym), 'time' : int(time())}
                     System_Msg('Remove {} from Symbol List'. format(order.sym))
                     del order
                     collect()
@@ -753,7 +775,7 @@ def main():
                     Symbol_List[order.sym]['isolate'] = True
                     Symbol_List[order.sym]['leverage'] = cfg.Leverage
                 else:
-                    del Symbol_List[order.sym]
+                    Detention_List[order.sym] = {'data' : Symbol_List.pop(order.sym), 'time' : int(time())}
                     System_Msg('Remove {} from Symbol List'. format(order.sym))
                     del order
                     collect()
@@ -765,7 +787,7 @@ def main():
                 if client.set_leverage(order.sym, cfg.Leverage) == True:
                     Symbol_List[order.sym]['leverage'] = cfg.Leverage
                 else:
-                    del Symbol_List[order.sym]
+                    Detention_List[order.sym] = {'data' : Symbol_List.pop(order.sym), 'time' : int(time())}
                     System_Msg('Remove {} from Symbol List'. format(order.sym))
                     del order
                     collect()
@@ -775,7 +797,7 @@ def main():
             # Query price
             order.price = client.get_last_price(order.sym)
             if order.price == False:
-                del Symbol_List[order.sym]
+                Detention_List[order.sym] = {'data' : Symbol_List.pop(order.sym), 'time' : int(time())}
                 System_Msg('Remove {} from Symbol List'. format(order.sym))
                 del order
                 collect()
@@ -797,7 +819,7 @@ def main():
             place_order = client.place_order(order.sym, order.side, order.qty, order.TP, order.SL)
             if place_order == False or place_order == '130023':
                 # Will lqt right after position placed, black list this one
-                del Symbol_List[order.sym]
+                Detention_List[order.sym] = {'data' : Symbol_List.pop(order.sym), 'time' : int(time())}
                 System_Msg('Remove {} from Symbol List'. format(order.sym))
                 del order
                 collect()
@@ -901,17 +923,24 @@ def main():
             
             if Pause_place_order and current_position_qty < cfg.Max_operate_position:
                 System_Msg('Available balance lower than stop operate limit!!\nPause place order!!')
+            
+            detention_release(cfg.detention_time)
 
             delay.anima_runtime(cfg.poll_order_interval, Start_time)
 
 
 if __name__ == '__main__':
+    while True:
         try:
             main()
         except Exception as Err:
             log.show('')
-            Error_Msg((str)(Err))
+            if Err == '(''Connection aborted.'', RemoteDisconnected(''Remote end closed connection without response''))':
+                System_Msg(Err)
+                os.system('pause')
+                continue
+            Error_Msg(str(Err))
             os.system('pause')
             os._exit(0)
 
-        # main()
+    # main()
