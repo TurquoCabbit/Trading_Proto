@@ -18,7 +18,7 @@ from Loading_animation import delay_anima
 from client import Client
 
 ##########################################################
-Version = '6.02'
+Version = '6.03'
 Date = '2021/11/24'
 
 Start_time = int(time())
@@ -594,7 +594,7 @@ def main():
                         # position expire if position_expire_time had set, check pnl
                         if posi_pnl < cfg.position_expire_thres:
                             # pnl lesser than threshold, start closaing it
-                            log.log_and_show('{} {} position expired {}, pnl {: .2f}%'.format(i, pnl.track_list[i]['side'], timestamp_format(((int)(time()) - pnl.track_list[i]['time']), '%Hh %Mm %Ss'), posi_pnl))
+                            log.log_and_show('{} {} position expired, pnl {: .2f}%'.format(i, pnl.track_list[i]['side'], posi_pnl))
                             place_order = client.place_order(i, pnl.track_list[i]['side'],  Position_List[i][pnl.track_list[i]['side']]['size'], 0, 0, True)
                             if place_order == False or place_order == '130023':
                                 # Will lqt right after position placed
