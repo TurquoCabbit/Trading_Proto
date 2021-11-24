@@ -14,7 +14,7 @@ from shutil import copytree
 
 from Make_log import Log
 import Update_Symbol_List
-import Loading_animation
+from Loading_animation import delay_anima
 from client import Client
 
 ##########################################################
@@ -25,7 +25,7 @@ Start_time = (int)(time())
 
 Symbol_List = {}
 
-delay = Loading_animation.delay_anima()
+delay = delay_anima()
 
 Pause_place_order = False
 
@@ -302,7 +302,38 @@ def price_trim(price, tick):
 def timestamp_format(stamp, format = '%H:%M:%S %Y-%m-%d'):
     return strftime(format, localtime(stamp))
 
+def argv_check():
+    if len(sys.argv) < 3:
+        log.show('Execution cmd :')
+        log.show('main.exe <api key> <api secret> <-R : restart pnl record>')
+        os.system('pause')
+        os._exit(0)
+    elif len(sys.argv[1]) != 18 or len(sys.argv[2]) != 36:
+        log.show('Invalid <api key> or <api secret>')
+        os.system('pause')
+        os._exit(0)
+
+    else:
+        #with other cmd
+        for i in sys.argv[3:]:
+            if not i.startswith('-'):
+                sys.argv.pop(sys.argv.index(i))
+
+        cmd = set(sys.argv[3:])
+
+        for i in cmd:
+            match i:
+                case '-R':                
+                    if os.path.isdir('pnl'):
+                        if not os.path.isdir('archive'):
+                            os.mkdir('archive')
+                        copytree('pnl', 'archive/pnl_{}'.format(timestamp_format(os.path.getmtime('pnl/balance.csv'), '%Y%m%d-%H;%M;%S')))
+                        rmtree('pnl')
+                case _:
+                    continue    
+
 def main():
+    argv_check()
     ##############################################################################################################################
     ### Load Cfg File
     cfg = CFG(Version)
@@ -350,8 +381,6 @@ def main():
     if cfg.position_expire_time != 0 and cfg.position_expire_time < cfg.poll_order_interval:
         cfg.position_expire_time = cfg.poll_order_interval
     
-
-
     log.log('cfg.json loaded')
     log.log('\tVersion: {}\n\tRun on test net: {}\n\tOperate position: {}\n\tOperate USDT: {}\n'.format(cfg.version, cfg.Test_net, cfg.Max_operate_position, cfg.operate_USDT) +\
             '\tStop_operate_USDT: {}\n\tPress_the_winned_USDT: {}\n\tPress_the_winned_thres_percentag: {}\n'.format(cfg.stop_operate_USDT, cfg.press_the_winned_USDT, cfg.press_the_winned_thres) +\
@@ -361,14 +390,7 @@ def main():
             '\tOperate group: {}\n\tOpen order interval: {}s\n\tPolling interval: {}s'.format(cfg.Group, cfg.open_order_interval, cfg.poll_order_interval))
 
     ##############################################################################################################################
-    ### Load history pnl data and init log
-    if len(sys.argv) > 3 and sys.argv[3] == '-R':
-        if os.path.isdir('pnl'):
-            if not os.path.isdir('archive'):
-                os.mkdir('archive')
-            copytree('pnl', 'archive/pnl_{}'.format(timestamp_format(os.path.getmtime('pnl/balance.csv'), '%Y%m%d-%H;%M;%S')))
-            rmtree('pnl')
-    
+    ### Load history pnl data and init log    
     pnl = PNL_data('pnl')
     pnl.load()
     ##############################################################################################################################
@@ -388,20 +410,14 @@ def main():
 
     ##############################################################################################################################
     ### Create client
-    if len(sys.argv) >= 3:
-        if cfg.Test_net:
-            # main net api and serect were passed
-            log.log('Run on Test Net !!!')
-            client = Client('https://api-testnet.bybit.com', api_key=sys.argv[1], api_secret=sys.argv[2])
-        else:
-            # main net api and serect were passed
-            log.log('Run on Main Net !!!')
-            client = Client('https://api.bybit.com', api_key=sys.argv[1], api_secret=sys.argv[2])
+    if cfg.Test_net:
+        # main net api and serect were passed
+        log.log('Run on Test Net !!!')
+        client = Client('https://api-testnet.bybit.com', api_key = sys.argv[1], api_secret = sys.argv[2])
     else:
-        log.show('Execution cmd :')
-        log.show('main.exe <api key> <api secret> <-R : restart pnl record>')
-        os.system('pause')
-        os._exit(0)
+        # main net api and serect were passed
+        log.log('Run on Main Net !!!')
+        client = Client('https://api.bybit.com', api_key = sys.argv[1], api_secret = sys.argv[2])
 
     ### Check Sym list
     if cfg.Group == 'all':
