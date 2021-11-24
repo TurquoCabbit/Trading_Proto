@@ -7,6 +7,7 @@ import os
 import json
 from gc import collect
 import random
+random.seed()
 import csv
 from shutil import rmtree
 from shutil import copytree
@@ -17,8 +18,8 @@ import Loading_animation
 from client import Client
 
 ##########################################################
-Version = '5.05'
-Date = '2021/11/23'
+Version = '5.06'
+Date = '2021/11/24'
 
 Start_time = (int)(time())
 
@@ -550,8 +551,8 @@ def main():
                         # position expire if position_expire_time had set, check pnl
                         if posi_pnl < cfg.position_expire_thres:
                             # pnl lesser than threshold, start closaing it
-                            log.log_and_show('{}\t{} position expired, pnl {: .2f}%'.format(i, pnl.track_list[i]['side'], cfg.position_expire_time, posi_pnl))
-                            place_order = client.place_order(i, pnl.track_list[i]['side'], pnl.track_list[i]['size'], 0, 0, True)
+                            log.log_and_show('{} {} position expired {}, pnl {: .2f}%'.format(i, pnl.track_list[i]['side'], timestamp_format(((int)(time()) - pnl.track_list[i]['time']), '%H-%M-%S'), posi_pnl))
+                            place_order = client.place_order(i, pnl.track_list[i]['side'],  Position_List[i][pnl.track_list[i]['side']]['size'], 0, 0, True)
                             if place_order == False or place_order == '130023':
                                 # Will lqt right after position placed
                                 del place_order
@@ -703,12 +704,11 @@ def main():
         
         if pnl.start_track_pnl:
             for i in pnl.track_list:
-                log.show('\t{} \t{}\t{: .2f}% \t{}'.format(i, pnl.track_list[i]['side'], pnl.track_list[i]['pnl'], timestamp_format(pnl.track_list[i]['time'])))
+                log.show('\t{} \t{}\t{: 7.2f}% \t{}'.format(i, pnl.track_list[i]['side'], pnl.track_list[i]['pnl'], timestamp_format(pnl.track_list[i]['time'])))
         log.show('')
         
         ### Randonly open position
         if not Pause_place_order and current_position_qty < cfg.Max_operate_position:
-            random.seed()
             order = Open()
 
             # Random pick
