@@ -18,10 +18,10 @@ from Loading_animation import delay_anima
 from client import Client
 
 ##########################################################
-Version = '5.06'
+Version = '5.07'
 Date = '2021/11/24'
 
-Start_time = (int)(time())
+Start_time = int(time())
 
 Symbol_List = {}
 
@@ -702,6 +702,7 @@ def main():
                         
                         pnl.win_rate = pnl.win_position * 100 / pnl.closed_position
                         log.log_and_show('{}\t{} position was cloasd, pnl: {} USDT'.format(i, pnl.track_list[i]['side'], closed_pnl))
+                        del closed_pnl
                         delete_list.append(i)
         
         for i in delete_list:
@@ -711,6 +712,7 @@ def main():
         del opened_position
         del position
         del Position_List
+        collect()
 
         pnl.write_pnl()
         pnl.write_position_list()
@@ -719,7 +721,7 @@ def main():
         
         if pnl.start_track_pnl:
             for i in pnl.track_list:
-                log.show('\t{} \t{}\t{: 7.2f}% \t{}'.format(i, pnl.track_list[i]['side'], pnl.track_list[i]['pnl'], timestamp_format(pnl.track_list[i]['time'])))
+                log.log_and_show('\t{} \t{}\t{: 7.2f}% \t{}'.format(i, pnl.track_list[i]['side'], pnl.track_list[i]['pnl'], timestamp_format(pnl.track_list[i]['time'])))
         log.show('')
         
         ### Randonly open position
