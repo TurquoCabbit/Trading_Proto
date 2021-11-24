@@ -18,10 +18,8 @@ from Loading_animation import delay_anima
 from client import Client
 
 ##########################################################
-Version = '6.03'
+Version = '6.04'
 Date = '2021/11/24'
-
-Start_time = int(time())
 
 Symbol_List = {}
 Detention_List = {}
@@ -63,6 +61,7 @@ class PNL_data:
         
         self.start_balance = 'start'
         self.current_balance = 0
+        self.start_time = int(time())
 
         self.dir = dir
 
@@ -80,6 +79,7 @@ class PNL_data:
             self.total_pnl_rate = self.temp['total_pnl_rate']
             self.start_balance = self.temp['start_balance']
             self.current_balance = self.temp['current_balance']
+            self.start_time = self.temp['start_time']
         except KeyError:
             self.closed_position = 0
             self.win_position = 0
@@ -88,6 +88,7 @@ class PNL_data:
             self.total_pnl_rate = 0            
             self.start_balance = 'start'
             self.current_balance = 0
+            self.start_time = int(time())
 
         del self.temp        
         
@@ -99,7 +100,8 @@ class PNL_data:
             'total_pnl' :  self.total_pnl,
             'total_pnl_rate' :  self.total_pnl_rate,
             'start_balance' :  self.start_balance,
-            'current_balance' :  self.current_balance
+            'current_balance' :  self.current_balance,
+            'start_time' : self.start_time
         }
         
         with open('{}/pnl.json'.format(self.dir), 'w') as file:
@@ -467,7 +469,7 @@ def main():
     del Symbol_query
 
     while True:
-        log.log_and_show(log.get_run_time(Start_time))
+        log.log_and_show(log.get_run_time(pnl.start_time))
 
         ### Check if eligible symbol qty exceed max operated qty
         if cfg.Max_operate_position > len(Symbol_List):
@@ -955,7 +957,7 @@ def main():
             detention_release(cfg.detention_time)
             
             collect()
-            delay.anima_runtime(cfg.poll_order_interval, Start_time)
+            delay.anima_runtime(cfg.poll_order_interval, pnl.start_time)
 
 
 if __name__ == '__main__':
