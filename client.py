@@ -152,7 +152,7 @@ class Client:
 
     def get_last_price(self, symbol):
         try:
-            return float(self.client.latest_information_for_symbol(symbol = symbol)['result'][0]['last_price'])
+            return self.client.latest_information_for_symbol(symbol = symbol)['result'][0]
         except Exception as err:
             err = str(err)
             #if not err.endswith(self.pybit_except_ending):

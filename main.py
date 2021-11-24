@@ -18,7 +18,7 @@ from Loading_animation import delay_anima
 from client import Client
 
 ##########################################################
-Version = '6.00'
+Version = '6.01'
 Date = '2021/11/24'
 
 Start_time = int(time())
@@ -39,7 +39,8 @@ log.log_and_show('Bybit USDT perpetual trading bot ver {} {}'.format(Version, Da
 class Open:
     def __init__(self) -> None:
         self.sym = ''
-        self.price = 0
+        self.last_price = 0
+        self.mark_price = 0
         self.side = ''
         self.qty = 0
         self.TP = 0
@@ -373,6 +374,8 @@ def main():
             #Sub version different
             cfg.update_version()
             cfg.load_cfg()
+    
+    Max_operate_position = cfg.Max_operate_position
 
     ### Check parameter
     if cfg.press_the_winned_thres == 0:
@@ -468,9 +471,18 @@ def main():
 
         ### Check if eligible symbol qty exceed max operated qty
         if cfg.Max_operate_position > len(Symbol_List):
-            System_Msg('Operate_position exceed symbol white list qty\nDecrease Operate_position form {} to {}'\
-                        .format(cfg.Max_operate_position, len(Symbol_List)))
-            cfg.Max_operate_position = len(Symbol_List)
+            if Max_operate_position > len(Symbol_List):
+                System_Msg('Max_operate_position exceed symbol white list qty\nDecrease Max_operate_position form {} to {}'\
+                            .format(Max_operate_position, len(Symbol_List)))
+                Max_operate_position = len(Symbol_List)
+            elif Max_operate_position < len(Symbol_List):
+                System_Msg('Symbol white list qty added\nIncrease Max_operate_position form {} to {}'\
+                            .format(Max_operate_position, len(Symbol_List)))
+                Max_operate_position = len(Symbol_List)
+        elif cfg.Max_operate_position != Max_operate_position:
+            Max_operate_position = cfg.Max_operate_position
+
+
 
         ### Query current wallet balance
         wallet = client.get_wallet_balance()
@@ -565,7 +577,7 @@ def main():
                     if not 'pressed' in pnl.track_list[i]:
                         pnl.track_list[i]['pressed'] = False
 
-            if len(opened_position) >= cfg.Max_operate_position:
+            if len(opened_position) >= Max_operate_position:
                 # position opening done start track
                 pnl.start_track_pnl = True
         
@@ -630,7 +642,6 @@ def main():
                             log.log_and_show('Close {} position successfully !!'.format(i))
                             del order_status
                             del place_order
-                            collect()
                             delete_list.append(i)
                         else:
                             # pnl larger than threshold, renew the time
@@ -646,9 +657,24 @@ def main():
                             if price == False:
                                 del price
                                 continue
-                            
-                            qty = qty_trim((cfg.press_the_winned_USDT * cfg.Leverage / price), Symbol_List[i]['qty_step'])
+
+                            last_price = float(price['last_price'])
+                            mark_price = float(price['mark_price'])
                             del price
+
+                            # Check if MarkPrice and LadtPrice detach exceed SL or TP do not press
+                            detach_percentage = abs(last_price - mark_price) / last_price * 100 * cfg.Leverage
+                            if detach_percentage > cfg.SL_percentage or detach_percentage > cfg.TP_percentage:
+                                System_Msg('{} MarkPrice and LadtPrice detach exceed too much\nDon''t press'.format(i))
+                                del last_price
+                                del mark_price
+                                del detach_percentage
+                                continue
+
+                            qty = qty_trim((cfg.press_the_winned_USDT * cfg.Leverage / last_price), Symbol_List[i]['qty_step'])
+                            del last_price
+                            del mark_price
+                            del detach_percentage
 
                             place_order = client.place_order(i, pnl.track_list[i]['side'], qty, Position_List[i][pnl.track_list[i]['side']]['take_profit'], Position_List[i][pnl.track_list[i]['side']]['stop_loss'])
                             if place_order == False or place_order == '130023':
@@ -698,7 +724,6 @@ def main():
                             log.log_and_show('Press {}\t{} position successfully !!'.format(i, pnl.track_list[i]['side']))
                             del order_status
                             del place_order
-                            collect()
                             pnl.track_list[i]['pressed'] = True
                         
                         else:
@@ -727,7 +752,6 @@ def main():
         del opened_position
         del position
         del Position_List
-        collect()
 
         current_position_qty = len(pnl.track_list)
         for i in pnl.track_list:
@@ -747,7 +771,7 @@ def main():
         log.show('')
         
         ### Randonly open position
-        if not Pause_place_order and current_position_qty < cfg.Max_operate_position:
+        if not Pause_place_order and current_position_qty < Max_operate_position:
             order = Open()
 
             # Random pick
@@ -763,9 +787,8 @@ def main():
                     Symbol_List[order.sym]['tpsl_mode'] = 'Full'
                 else:
                     Detention_List[order.sym] = {'data' : Symbol_List.pop(order.sym), 'time' : int(time())}
-                    System_Msg('Remove {} from Symbol List'. format(order.sym))
+                    System_Msg('Put {} into detention'. format(order.sym))
                     del order
-                    collect()
                     delay.delay(cfg.open_order_interval)
                     continue
 
@@ -776,9 +799,8 @@ def main():
                     Symbol_List[order.sym]['leverage'] = cfg.Leverage
                 else:
                     Detention_List[order.sym] = {'data' : Symbol_List.pop(order.sym), 'time' : int(time())}
-                    System_Msg('Remove {} from Symbol List'. format(order.sym))
+                    System_Msg('Put {} into detention'. format(order.sym))
                     del order
-                    collect()
                     delay.delay(cfg.open_order_interval)
                     continue
 
@@ -788,48 +810,59 @@ def main():
                     Symbol_List[order.sym]['leverage'] = cfg.Leverage
                 else:
                     Detention_List[order.sym] = {'data' : Symbol_List.pop(order.sym), 'time' : int(time())}
-                    System_Msg('Remove {} from Symbol List'. format(order.sym))
+                    System_Msg('Put {} into detention'. format(order.sym))
                     del order
-                    collect()
                     delay.delay(cfg.open_order_interval)
                     continue
 
             # Query price
-            order.price = client.get_last_price(order.sym)
-            if order.price == False:
+            price = client.get_last_price(order.sym)
+            if price == False:
                 Detention_List[order.sym] = {'data' : Symbol_List.pop(order.sym), 'time' : int(time())}
-                System_Msg('Remove {} from Symbol List'. format(order.sym))
+                System_Msg('Put {} into detention'. format(order.sym))
                 del order
-                collect()
                 delay.delay(cfg.open_order_interval)
                 continue
+            
+            order.last_price = float(price['last_price'])
+            order.mark_price = float(price['mark_price'])
+            del price
+
+            # Check if MarkPrice and LadtPrice detach exceed SL or TP, put into to detention
+            detach_percentage = abs(order.last_price - order.mark_price) / order.last_price * 100 * cfg.Leverage
+            if detach_percentage > cfg.SL_percentage or detach_percentage > cfg.TP_percentage:
+                Detention_List[order.sym] = {'data' : Symbol_List.pop(order.sym), 'time' : int(time())}
+                System_Msg('MarkPrice and LadtPrice detach exceed too much\nPut {} into detention'. format(order.sym))
+                del order
+                del detach_percentage
+                delay.delay(cfg.open_order_interval)
+                continue
+            del detach_percentage
 
             # Calculate rough TP/SL and qty
-            order.qty = qty_trim((cfg.operate_USDT * cfg.Leverage / order.price), Symbol_List[order.sym]['qty_step'])
+            order.qty = qty_trim((cfg.operate_USDT * cfg.Leverage / order.last_price), Symbol_List[order.sym]['qty_step'])
             if order.side == 'Buy':
-                order.TP = price_trim((1 + (cfg.TP_percentage / cfg.Leverage / 100)) * order.price, Symbol_List[order.sym]['tick_size'])
-                order.SL = price_trim((1 - (cfg.SL_percentage / cfg.Leverage / 100)) * order.price, Symbol_List[order.sym]['tick_size'])
+                order.TP = price_trim((1 + (cfg.TP_percentage / cfg.Leverage / 100)) * order.last_price, Symbol_List[order.sym]['tick_size'])
+                order.SL = price_trim((1 - (cfg.SL_percentage / cfg.Leverage / 100)) * order.last_price, Symbol_List[order.sym]['tick_size'])
             elif order.side == 'Sell':
-                order.TP = price_trim((1 - (cfg.TP_percentage / cfg.Leverage / 100)) * order.price, Symbol_List[order.sym]['tick_size'])
-                order.SL = price_trim((1 + (cfg.SL_percentage / cfg.Leverage / 100)) * order.price, Symbol_List[order.sym]['tick_size'])
+                order.TP = price_trim((1 - (cfg.TP_percentage / cfg.Leverage / 100)) * order.last_price, Symbol_List[order.sym]['tick_size'])
+                order.SL = price_trim((1 + (cfg.SL_percentage / cfg.Leverage / 100)) * order.last_price, Symbol_List[order.sym]['tick_size'])
             
-            log.log_and_show('Opening {} {} {} order at about {}'.format(order.qty, order.sym, order.side, order.price))
+            log.log_and_show('Opening {} {} {} order at about {}'.format(order.qty, order.sym, order.side, order.last_price))
 
             # Open order
             place_order = client.place_order(order.sym, order.side, order.qty, order.TP, order.SL)
             if place_order == False or place_order == '130023':
                 # Will lqt right after position placed, black list this one
                 Detention_List[order.sym] = {'data' : Symbol_List.pop(order.sym), 'time' : int(time())}
-                System_Msg('Remove {} from Symbol List'. format(order.sym))
+                System_Msg('Put {} into detention'. format(order.sym))
                 del order
-                collect()
                 delay.delay(cfg.open_order_interval)
                 continue
             elif place_order == '130021':
                 # Under balance, stop open order
                 Pause_place_order = True
                 del order
-                collect()
                 delay.delay(cfg.open_order_interval)
                 continue
             else:
@@ -868,33 +901,30 @@ def main():
                 Error_Msg('Open {} position order Fail!! order_status: {}'.format(order.sym, order_status))
                 del order
                 del order_status
-                collect()
                 delay.delay(cfg.open_order_interval)
                 continue
 
             #Get entry price and Calculate new TP/SL
-            order.price = client.get_entry_price(order.sym, order.side)
-            if order.price != False:
+            order.last_price = client.get_entry_price(order.sym, order.side)
+            if order.last_price != False:
                 if order.side == 'Buy':
-                    order.TP = price_trim((1 + (cfg.TP_percentage / cfg.Leverage / 100)) * order.price, Symbol_List[order.sym]['tick_size'])
-                    order.SL = price_trim((1 - (cfg.SL_percentage / cfg.Leverage / 100)) * order.price, Symbol_List[order.sym]['tick_size'])
+                    order.TP = price_trim((1 + (cfg.TP_percentage / cfg.Leverage / 100)) * order.last_price, Symbol_List[order.sym]['tick_size'])
+                    order.SL = price_trim((1 - (cfg.SL_percentage / cfg.Leverage / 100)) * order.last_price, Symbol_List[order.sym]['tick_size'])
                 elif order.side == 'Sell':
-                    order.TP = price_trim((1 - (cfg.TP_percentage / cfg.Leverage / 100)) * order.price, Symbol_List[order.sym]['tick_size'])
-                    order.SL = price_trim((1 + (cfg.SL_percentage / cfg.Leverage / 100)) * order.price, Symbol_List[order.sym]['tick_size'])
+                    order.TP = price_trim((1 - (cfg.TP_percentage / cfg.Leverage / 100)) * order.last_price, Symbol_List[order.sym]['tick_size'])
+                    order.SL = price_trim((1 + (cfg.SL_percentage / cfg.Leverage / 100)) * order.last_price, Symbol_List[order.sym]['tick_size'])
             else:
                 del order
-                collect()
                 delay.delay(cfg.open_order_interval)
                 continue
             
             # Calculate and set Trailing stop
             if cfg.Trailing_Stop != 0:
-                order.trailing = price_trim(order.price * (cfg.Trailing_Stop / cfg.Leverage / 100), Symbol_List[order.sym]['tick_size'])
+                order.trailing = price_trim(order.last_price * (cfg.Trailing_Stop / cfg.Leverage / 100), Symbol_List[order.sym]['tick_size'])
 
                 # Set trailing stop
                 if client.set_trailing_stop(order.sym, order.side, order.trailing, order.TP, order.SL, cfg.Trigger) != True:
                     del order
-                    collect()
                     delay.delay(cfg.open_order_interval)
                     continue
 
@@ -902,18 +932,16 @@ def main():
                 # fine tune TPSL
                 if client.set_TPSL(order.sym, order.side, order.TP, order.SL, cfg.Trigger) != True:
                     del order
-                    collect()
                     delay.delay(cfg.open_order_interval)
                     continue
                                         
-            log.log_and_show('Entry pirce : {}'.format(order.price))
+            log.log_and_show('Entry pirce : {}'.format(order.last_price))
             if cfg.Trailing_Stop != 0:
                 log.log_and_show('TP : {},  SL : {},  Trailing stop : {}\n'.format(order.TP, order.SL, order.trailing))
             else:
                 log.log_and_show('TP : {},  SL : {}\n'.format(order.TP, order.SL))
 
             del order
-            collect()
             delay.delay(cfg.open_order_interval)
         else:
             if not pnl.start_track_pnl:
@@ -921,26 +949,27 @@ def main():
                 delay.delay(cfg.open_order_interval)
                 continue
             
-            if Pause_place_order and current_position_qty < cfg.Max_operate_position:
+            if Pause_place_order and current_position_qty < Max_operate_position:
                 System_Msg('Available balance lower than stop operate limit!!\nPause place order!!')
             
             detention_release(cfg.detention_time)
-
+            
+            collect()
             delay.anima_runtime(cfg.poll_order_interval, Start_time)
 
 
 if __name__ == '__main__':
-    while True:
-        try:
-            main()
-        except Exception as Err:
-            log.show('')
-            if Err == '(''Connection aborted.'', RemoteDisconnected(''Remote end closed connection without response''))':
-                System_Msg(Err)
-                os.system('pause')
-                continue
-            Error_Msg(str(Err))
-            os.system('pause')
-            os._exit(0)
+    # while True:
+    #     try:
+    #         main()
+    #     except Exception as Err:
+    #         log.show('')
+    #         if Err == '(''Connection aborted.'', RemoteDisconnected(''Remote end closed connection without response''))':
+    #             System_Msg(Err)
+    #             os.system('pause')
+    #             continue
+    #         Error_Msg(str(Err))
+    #         os.system('pause')
+    #         os._exit(0)
 
-    # main()
+    main()
