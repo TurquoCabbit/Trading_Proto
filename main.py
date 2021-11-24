@@ -618,11 +618,11 @@ def main():
                             collect()
                             delete_list.append(i)
                         else:
-                            # pnl larger than threshold, record time
+                            # pnl larger than threshold, renew the time
                             pnl.track_list[i]['time'] = int(time())
 
                         
-                    if cfg.press_the_winned_USDT > 0 and pnl.track_list[i]['pressed'] and posi_pnl > cfg.press_the_winned_thres:
+                    if cfg.press_the_winned_USDT > 0 and not pnl.track_list[i]['pressed'] and posi_pnl > cfg.press_the_winned_thres:
                         # position still going and need to press the win
                         if not Pause_place_order:
                             log.log_and_show('Add {}\tUSDT to {}\t{} position'.format(cfg.press_the_winned_USDT, i,  pnl.track_list[i]['side']))
@@ -684,7 +684,6 @@ def main():
                             del order_status
                             del place_order
                             collect()
-                            delete_list.append(i)
                             pnl.track_list[i]['pressed'] = True
                         
                         else:
