@@ -18,7 +18,7 @@ from Loading_animation import delay_anima
 from client import Client
 
 ##########################################################
-Version = '6.05'
+Version = '6.06'
 Date = '2021/11/25'
 
 Symbol_List = {}
@@ -587,9 +587,33 @@ def main():
             pnl.load_position_list()
 
             for i in pnl.track_list:
-                if i in opened_position:
-                    posi_pnl = Position_List[i][pnl.track_list[i]['side']]['unrealised_pnl']\
-                                / (Position_List[i][pnl.track_list[i]['side']]['position_margin'] + Position_List[i][pnl.track_list[i]['side']]['occ_closing_fee']) * 100
+                if i in opened_position:                    
+                    price = client.get_last_price(i)
+                    if price == False:
+                        del price
+                        delay.delay(0.1)
+                        continue
+                    
+                    match cfg.Trigger:
+                        case 'LastPrice':
+                            posi_pnl = float(price['last_price']) - Position_List[i][pnl.track_list[i]['side']]['entry_price']
+                        case 'MarkPrice':
+                            posi_pnl = float(price['mark_price']) - Position_List[i][pnl.track_list[i]['side']]['entry_price']
+                        case 'IndexPrice':
+                            posi_pnl = float(price['index_price']) - Position_List[i][pnl.track_list[i]['side']]['entry_price']
+                        
+                    posi_pnl = posi_pnl * cfg.Leverage * 100 / Position_List[i][pnl.track_list[i]['side']]['entry_price']
+
+                    if pnl.track_list[i]['side'] == 'Sell':
+                        posi_pnl *= -1
+
+                    last_price = float(price['last_price'])
+                    mark_price = float(price['mark_price'])
+                    del price
+
+                    # posi_pnl = Position_List[i][pnl.track_list[i]['side']]['unrealised_pnl']\
+                    #             / (Position_List[i][pnl.track_list[i]['side']]['position_margin'] + Position_List[i][pnl.track_list[i]['side']]['occ_closing_fee']) * 100
+
                     # position still going
                     if cfg.position_expire_time != 0 and (time() - pnl.track_list[i]['time']) > cfg.position_expire_time:
                         # position expire if position_expire_time had set, check pnl
@@ -644,6 +668,7 @@ def main():
                             del order_status
                             del place_order
                             delete_list.append(i)
+                            delay.delay(cfg.open_order_interval)
                         else:
                             # pnl larger than threshold, renew the time
                             pnl.track_list[i]['time'] = int(time())
@@ -653,16 +678,7 @@ def main():
                         # position still going and need to press the win
                         if not Pause_place_order:
                             log.log_and_show('Add {}\tUSDT to {}\t{} position'.format(cfg.press_the_winned_USDT, i,  pnl.track_list[i]['side']))
-                            # get symbol last price
-                            price = client.get_last_price(i)
-                            if price == False:
-                                del price
-                                continue
-
-                            last_price = float(price['last_price'])
-                            mark_price = float(price['mark_price'])
-                            del price
-
+                            
                             # Check if MarkPrice and LadtPrice detach exceed SL or TP do not press
                             detach_percentage = abs(last_price - mark_price) / last_price * 100 * cfg.Leverage
                             if detach_percentage > cfg.SL_percentage or detach_percentage > cfg.TP_percentage:
@@ -726,12 +742,14 @@ def main():
                             del order_status
                             del place_order
                             pnl.track_list[i]['pressed'] = True
+                            delay.delay(cfg.open_order_interval)
                         
                         else:
                             log.log_and_show('Under balance for press the winned', format(i, pnl.track_list[i]['side']))
 
                     pnl.track_list[i]['pnl'] = posi_pnl
                     del posi_pnl
+                    delay.delay(0.1)
                     
                 else:
                     # position  closed
@@ -764,15 +782,17 @@ def main():
         pnl.write_pnl()
         pnl.write_position_list()
         
-        log.log_and_show('Opened Position: {}\tBuy: {} Sell: {}'.format(current_position_qty, current_position_buy, current_position_sell))
-        
+        show = 'Opened Position: {}\tBuy: {} Sell: {}\n'.format(current_position_qty, current_position_buy, current_position_sell)        
         if pnl.start_track_pnl:
             for i in pnl.track_list:
-                log.log_and_show('\t{} \t{}\t{: 7.2f}% \t{}'.format(i, pnl.track_list[i]['side'], pnl.track_list[i]['pnl'], timestamp_format(pnl.track_list[i]['time'])))
-        log.show('')
+                show += '\t{} \t{}\t{: 7.2f}% \t{}\n'.format(i, pnl.track_list[i]['side'], pnl.track_list[i]['pnl'], timestamp_format(pnl.track_list[i]['time']))
+        log.log_and_show(show)
+        del show
         
         ### Randonly open position
         if not Pause_place_order and current_position_qty < Max_operate_position:
+            if pnl.start_track_pnl:
+                pnl.start_track_pnl = False
             order = Open()
 
             # Random pick
