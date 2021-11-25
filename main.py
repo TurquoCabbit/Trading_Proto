@@ -18,7 +18,7 @@ from Loading_animation import delay_anima
 from client import Client
 
 ##########################################################
-Version = '6.06'
+Version = '6.07'
 Date = '2021/11/25'
 
 Symbol_List = {}
@@ -869,7 +869,7 @@ def main():
                 order.TP = price_trim((1 - (cfg.TP_percentage / cfg.Leverage / 100)) * order.last_price, Symbol_List[order.sym]['tick_size'])
                 order.SL = price_trim((1 + (cfg.SL_percentage / cfg.Leverage / 100)) * order.last_price, Symbol_List[order.sym]['tick_size'])
             
-            log.log_and_show('Opening {} {} {} order at about {}'.format(order.qty, order.sym, order.side, order.last_price))
+            log.log_and_show('Opening {} {} {} position at about {}'.format(order.qty, order.sym, order.side, order.last_price))
 
             # Open order
             place_order = client.place_order(order.sym, order.side, order.qty, order.TP, order.SL)
@@ -888,9 +888,9 @@ def main():
                 continue
             else:
                 if place_order['ret_msg'] != 'OK':
-                    System_Msg('{} open order create successfully !!\nwith return msg: {}'.format(order.sym, place_order['ret_msg']))
+                    System_Msg('{} {} order create successfully !!\nwith return msg: {}'.format(order.sym, order.side, place_order['ret_msg']))
                 else:
-                    log.log_and_show('{} open order create successfully !!'.format(order.sym))
+                    log.log_and_show('{} {} order create successfully !!'.format(order.sym, order.side))
 
                 order.order_id = place_order['result']['order_id']
                 pnl.track_list[order.sym] = {'time' : int(time()), 'side' : order.side, 'pressed' : False}
