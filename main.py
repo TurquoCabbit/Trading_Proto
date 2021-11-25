@@ -18,7 +18,7 @@ from Loading_animation import delay_anima
 from client import Client
 
 ##########################################################
-Version = '6.07'
+Version = '6.08'
 Date = '2021/11/25'
 
 Symbol_List = {}
@@ -587,7 +587,8 @@ def main():
             pnl.load_position_list()
 
             for i in pnl.track_list:
-                if i in opened_position:                    
+                if i in opened_position:
+                    # position still going                   
                     price = client.get_last_price(i)
                     if price == False:
                         del price
@@ -611,10 +612,6 @@ def main():
                     mark_price = float(price['mark_price'])
                     del price
 
-                    # posi_pnl = Position_List[i][pnl.track_list[i]['side']]['unrealised_pnl']\
-                    #             / (Position_List[i][pnl.track_list[i]['side']]['position_margin'] + Position_List[i][pnl.track_list[i]['side']]['occ_closing_fee']) * 100
-
-                    # position still going
                     if cfg.position_expire_time != 0 and (time() - pnl.track_list[i]['time']) > cfg.position_expire_time:
                         # position expire if position_expire_time had set, check pnl
                         if posi_pnl < cfg.position_expire_thres:
@@ -668,11 +665,20 @@ def main():
                             del order_status
                             del place_order
                             delete_list.append(i)
+                            
+                            closed_pnl = client.get_last_closed_pnl(i)
+                            if closed_pnl != False:
+                                pnl.closed_position += 1
+                                if closed_pnl > 0:
+                                    pnl.win_position += 1
+                                
+                                pnl.win_rate = pnl.win_position * 100 / pnl.closed_position
+                                del closed_pnl
+                            
                             delay.delay(cfg.open_order_interval)
                         else:
                             # pnl larger than threshold, renew the time
                             pnl.track_list[i]['time'] = int(time())
-
                         
                     if cfg.press_the_winned_USDT > 0 and not pnl.track_list[i]['pressed'] and posi_pnl > cfg.press_the_winned_thres:
                         # position still going and need to press the win
