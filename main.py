@@ -18,8 +18,8 @@ from Loading_animation import delay_anima
 from client import Client
 
 ##########################################################
-Version = '6.04'
-Date = '2021/11/24'
+Version = '6.05'
+Date = '2021/11/25'
 
 Symbol_List = {}
 Detention_List = {}
@@ -354,7 +354,6 @@ def detention_release(Detention_time = 86400):
     del release
 
 def main():
-    argv_check()
     ##############################################################################################################################
     ### Load Cfg File
     cfg = CFG(Version)
@@ -961,17 +960,25 @@ def main():
 
 
 if __name__ == '__main__':
-    # while True:
-    #     try:
-    #         main()
-    #     except Exception as Err:
-    #         log.show('')
-    #         if Err == '(''Connection aborted.'', RemoteDisconnected(''Remote end closed connection without response''))':
-    #             System_Msg(Err)
-    #             os.system('pause')
-    #             continue
-    #         Error_Msg(str(Err))
-    #         os.system('pause')
-    #         os._exit(0)
+    argv_check()
 
-    main()
+    while True:
+        try:
+            main()
+        except Exception as Err:            
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            log.show('')
+
+            match Err:
+                case '(''Connection aborted.'', RemoteDisconnected(''Remote end closed connection without response''))':
+                    System_Msg(Err)
+                    os.system('pause')
+                    continue
+                case _:
+                    Error_Msg(Err)
+                    Error_Msg('Exception type: {}, in: <{}>, line: {}'.format(exc_type, fname, exc_tb.tb_lineno))
+                    os.system('pause')
+                    os._exit(0)
+
+    # main()
