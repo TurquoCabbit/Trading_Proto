@@ -19,7 +19,7 @@ from client import Client
 
 os.system('cls')
 ##########################################################
-Version = '6.11'
+Version = '7.00'
 Date = '2021/11/26'
 
 Symbol_List = {}
@@ -28,8 +28,6 @@ Detention_List = {}
 delay = delay_anima()
 
 Pause_place_order = False
-Retry_times = 30
-Retry_delay = 0.2
 
 ##############################################################################################################################
 ### init log
@@ -157,6 +155,8 @@ class CFG:
         self.detention_time = None
         self.Token_list = []
         self.Black_list = []
+        self.Retry_times = None
+        self.Retry_delay = None
         
         self.cfg_init = {
                             'Version' : Version,
@@ -184,7 +184,9 @@ class CFG:
                                 'BNB',  'FTT',  'UNI',  'AXS',
                                 'LUNA', 'ATOM', 'AAVE', 'FTM',
                                 'BIT',  'ADA',  'ICP'
-                                ]
+                                ],
+                            'Retry_times' : 30,
+                            'Retry_delay' : 0.2
                         }
     
     def new_cfg(self):
@@ -228,6 +230,10 @@ class CFG:
                     self.Token_list.append('{}USDT'.format(i))
             else:
                 self.Group = 'all'
+
+            self.Retry_times = abs(self.cfg['Retry_times'])
+            self.Retry_delay = abs(self.cfg['Retry_delay'])
+
             return True
         
         except KeyError:
@@ -409,15 +415,20 @@ if __name__ == '__main__':
 
             if cfg.position_expire_time != 0 and cfg.position_expire_time < cfg.poll_order_interval:
                 cfg.position_expire_time = cfg.poll_order_interval
+
+            if cfg.Retry_times < 10:
+                cfg.Retry_times = 10
+
+            if cfg.Retry_delay < 0.1:
+                cfg.Retry_delay = 0.1
             
-            log.log('cfg.json loaded')
-            log.log('\tVersion: {}\n\tRun on test net: {}\n\tOperate position: {}\n\tOperate USDT: {}\n'.format(cfg.version, cfg.Test_net, cfg.Max_operate_position, cfg.operate_USDT) +\
+            log.log('cfg.json loaded\n\tVersion: {}\n\tRun on test net: {}\n\tOperate position: {}\n\tOperate USDT: {}\n'.format(cfg.version, cfg.Test_net, cfg.Max_operate_position, cfg.operate_USDT) +\
                     '\tStop_operate_USDT: {}\n\tPress_the_winned_USDT: {}\n\tPress_the_winned_thres_percentag: {}%\n'.format(cfg.stop_operate_USDT, cfg.press_the_winned_USDT, cfg.press_the_winned_thres) +\
                     '\tLeverage: {}\n\tOperate side: {}\n\tTP: {}%\n\tSL: {}%\n'.format(cfg.Leverage, cfg.side, cfg.TP_percentage, cfg.SL_percentage) +\
                     '\tTPSL trigger: {}\n\tTrailing stop: {}%\n'.format(cfg.Trigger, cfg.Trailing_Stop) +\
                     '\tPosition_expire_time: {}s\n\tPosition_expire_thres_percentag: {}%\n'.format(cfg.position_expire_time, cfg.position_expire_thres) +\
                     '\tOperate group: {}\n\tOpen order interval: {}s\n\tPolling interval: {}s\n'.format(cfg.Group, cfg.open_order_interval, cfg.poll_order_interval) +\
-                    '\tDetention_time: {}s'.format(cfg.detention_time))
+                    '\tDetention_time: {}s\n\tRetry_times: {}\n\tRetry_delay: {}'.format(cfg.detention_time, cfg.Retry_times, cfg.Retry_delay))
 
             ##############################################################################################################################
             ### Load history pnl data and init log    
@@ -640,13 +651,13 @@ if __name__ == '__main__':
                                         else:
                                             log.log_and_show('{} close order create successfully !!'.format(i))
                                     
-                                    retry = Retry_times
+                                    retry = cfg.Retry_times
                                     while retry:
                                         order_status = client.get_order_status(i, place_order['result']['order_id'], )
                                         if order_status != False:
                                             match order_status:
                                                 case 'Filled':
-                                                    log.log('{} {} order ''{}'' Filled, retry: {} times'.format(i, pnl.track_list[i]['side'], place_order['result']['order_id'], Retry_times - retry))
+                                                    log.log('{} {} order ''{}'' Filled, retry: {} times'.format(i, pnl.track_list[i]['side'], place_order['result']['order_id'], cfg.Retry_times - retry))
                                                     break
                                                 case 'Rejected' | 'Cancelled':
                                                     retry = 0
@@ -655,7 +666,7 @@ if __name__ == '__main__':
                                                     pass
 
                                             retry -= 1
-                                            delay.delay(Retry_delay)
+                                            delay.delay(cfg.Retry_delay)
                                         else:
                                             break
 
@@ -723,13 +734,13 @@ if __name__ == '__main__':
                                         else:
                                             log.log_and_show('{} press order create successfully !!'.format(i))
 
-                                    retry = Retry_times
+                                    retry = cfg.Retry_times
                                     while retry:
                                         order_status = client.get_order_status(i, place_order['result']['order_id'], )
                                         if order_status != False:
                                             match order_status:
                                                 case 'Filled':
-                                                    log.log('{} {} order ''{}'' Filled, retry: {} times'.format(i, pnl.track_list[i]['side'], place_order['result']['order_id'], Retry_times - retry))
+                                                    log.log('{} {} order ''{}'' Filled, retry: {} times'.format(i, pnl.track_list[i]['side'], place_order['result']['order_id'], cfg.Retry_times - retry))
                                                     break
                                                 case 'Rejected' | 'Cancelled':
                                                     retry = 0
@@ -738,7 +749,7 @@ if __name__ == '__main__':
                                                     pass
 
                                             retry -= 1
-                                            delay.delay(Retry_delay)
+                                            delay.delay(cfg.Retry_delay)
                                         else:
                                             break
 
@@ -911,13 +922,13 @@ if __name__ == '__main__':
                         del place_order
 
                     # Get newly placed order status
-                    retry = Retry_times
+                    retry = cfg.Retry_times
                     while retry:
                         order_status = client.get_order_status(order.sym, order.order_id)
                         if order_status != False:
                             match order_status:
                                 case 'Filled':
-                                    log.log('{} {} order ''{}'' Filled, retry: {} times'.format(order.sym, order.side, order.order_id, Retry_times - retry))
+                                    log.log('{} {} order ''{}'' Filled, retry: {} times'.format(order.sym, order.side, order.order_id, cfg.Retry_times - retry))
                                     break
                                 case 'Rejected' | 'Cancelled':
                                     retry = 0
@@ -926,7 +937,7 @@ if __name__ == '__main__':
                                     pass
 
                             retry -= 1
-                            delay.delay(Retry_delay)
+                            delay.delay(cfg.Retry_delay)
                         else:
                             break
 
