@@ -19,7 +19,7 @@ from client import Client
 
 os.system('cls')
 ##########################################################
-Version = '6.10'
+Version = '6.11'
 Date = '2021/11/26'
 
 Symbol_List = {}
@@ -28,6 +28,8 @@ Detention_List = {}
 delay = delay_anima()
 
 Pause_place_order = False
+Retry_times = 30
+Retry_delay = 0.2
 
 ##############################################################################################################################
 ### init log
@@ -353,317 +355,417 @@ def detention_release(Detention_time = 86400):
     for i in release:
         del Detention_List[i]
     del release
-
-def main():
-    ##############################################################################################################################
-    ### Load Cfg File
-    cfg = CFG(Version)
-
-    if not os.path.isfile('cfg.json'):
-        System_Msg('cfg.json file missing. Generate a new one')
-        cfg.new_cfg()
-        os.system('pause')
-
-    if not cfg.load_cfg():
-        if (int)(cfg.version.split('.')[0]) != (int)(Version.split('.')[0]):
-            # Main version different
-            cfg.upgrade_cfg()
-            log.show('Upgrade cfg.json, please check new config or press any key to continue')
-            os.system('pause')
-            cfg.load_cfg()
-
-        elif (int)(cfg.version.split('.')[1]) < (int)(Version.split('.')[1]):
-            #Sub version different
-            cfg.update_version()
-            cfg.load_cfg()
     
-    Max_operate_position = cfg.Max_operate_position
+if __name__ == '__main__':
+    argv_check()
 
-    ### Check parameter
-    if cfg.press_the_winned_thres == 0:
-        cfg.press_the_winned_USDT = 0
+    while True:
+        try:
+            ##############################################################################################################################
+            ### Load Cfg File
+            cfg = CFG(Version)
 
-    if cfg.stop_operate_USDT < cfg.operate_USDT + cfg.press_the_winned_USDT:
-        cfg.stop_operate_USDT = cfg.operate_USDT + cfg.press_the_winned_USDT
+            if not os.path.isfile('cfg.json'):
+                System_Msg('cfg.json file missing. Generate a new one')
+                cfg.new_cfg()
+                os.system('pause')
 
-    if cfg.open_order_interval < 1:
-        cfg.open_order_interval = 1
-        
-    if cfg.poll_order_interval < 10:
-        cfg.poll_order_interval = 10
+            if not cfg.load_cfg():
+                if (int)(cfg.version.split('.')[0]) != (int)(Version.split('.')[0]):
+                    # Main version different
+                    cfg.upgrade_cfg()
+                    log.show('Upgrade cfg.json, please check new config or press any key to continue')
+                    os.system('pause')
+                    cfg.load_cfg()
 
-    if cfg.side != 'Buy' and cfg.side != 'Sell':
-        cfg.side = 'Both'
+                elif (int)(cfg.version.split('.')[1]) < (int)(Version.split('.')[1]):
+                    #Sub version different
+                    cfg.update_version()
+                    cfg.load_cfg()
+            
+            Max_operate_position = cfg.Max_operate_position
 
-    if cfg.Trigger != 'MarkPrice' and cfg.Trigger != 'LastPrice' and cfg.Trigger != 'IndexPrice':
-        cfg.Trigger = 'LastPrice'
+            ### Check parameter
+            if cfg.press_the_winned_thres == 0:
+                cfg.press_the_winned_USDT = 0
 
-    if cfg.position_expire_thres > cfg.TP_percentage:
-        cfg.position_expire_time = 0
+            if cfg.stop_operate_USDT < cfg.operate_USDT + cfg.press_the_winned_USDT:
+                cfg.stop_operate_USDT = cfg.operate_USDT + cfg.press_the_winned_USDT
 
-    if cfg.position_expire_time != 0 and cfg.position_expire_time < cfg.poll_order_interval:
-        cfg.position_expire_time = cfg.poll_order_interval
-    
-    log.log('cfg.json loaded')
-    log.log('\tVersion: {}\n\tRun on test net: {}\n\tOperate position: {}\n\tOperate USDT: {}\n'.format(cfg.version, cfg.Test_net, cfg.Max_operate_position, cfg.operate_USDT) +\
-            '\tStop_operate_USDT: {}\n\tPress_the_winned_USDT: {}\n\tPress_the_winned_thres_percentag: {}%\n'.format(cfg.stop_operate_USDT, cfg.press_the_winned_USDT, cfg.press_the_winned_thres) +\
-            '\tLeverage: {}\n\tOperate side: {}\n\tTP: {}%\n\tSL: {}%\n'.format(cfg.Leverage, cfg.side, cfg.TP_percentage, cfg.SL_percentage) +\
-            '\tTPSL trigger: {}\n\tTrailing stop: {}%\n'.format(cfg.Trigger, cfg.Trailing_Stop) +\
-            '\tPosition_expire_time: {}s\n\tPosition_expire_thres_percentag: {}%\n'.format(cfg.position_expire_time, cfg.position_expire_thres) +\
-            '\tOperate group: {}\n\tOpen order interval: {}s\n\tPolling interval: {}s\n'.format(cfg.Group, cfg.open_order_interval, cfg.poll_order_interval) +\
-            '\tDetention_time: {}s'.format(cfg.detention_time))
+            if cfg.open_order_interval < 1:
+                cfg.open_order_interval = 1
+                
+            if cfg.poll_order_interval < 10:
+                cfg.poll_order_interval = 10
 
-    ##############################################################################################################################
-    ### Load history pnl data and init log    
-    pnl = PNL_data('pnl')
-    pnl.load()
-    ##############################################################################################################################
-    ### Load Symbol List
-    if not os.path.isfile('Symbol_list.json'):
-        if Update_Symbol_List.Query_USDT_Perpetual_Symbol():
-            with open('Symbol_list.json', 'r') as file:
-                Symbol_query = json.load(file)
-    else:    
-        with open('Symbol_list.json', 'r') as file:
-            Symbol_query = json.load(file)
+            if cfg.side != 'Buy' and cfg.side != 'Sell':
+                cfg.side = 'Both'
 
-        if Symbol_query['version'] != Update_Symbol_List.Symbol_list_ver:
-            if Update_Symbol_List.Query_USDT_Perpetual_Symbol():
+            if cfg.Trigger != 'MarkPrice' and cfg.Trigger != 'LastPrice' and cfg.Trigger != 'IndexPrice':
+                cfg.Trigger = 'LastPrice'
+
+            if cfg.position_expire_thres > cfg.TP_percentage:
+                cfg.position_expire_time = 0
+
+            if cfg.position_expire_time != 0 and cfg.position_expire_time < cfg.poll_order_interval:
+                cfg.position_expire_time = cfg.poll_order_interval
+            
+            log.log('cfg.json loaded')
+            log.log('\tVersion: {}\n\tRun on test net: {}\n\tOperate position: {}\n\tOperate USDT: {}\n'.format(cfg.version, cfg.Test_net, cfg.Max_operate_position, cfg.operate_USDT) +\
+                    '\tStop_operate_USDT: {}\n\tPress_the_winned_USDT: {}\n\tPress_the_winned_thres_percentag: {}%\n'.format(cfg.stop_operate_USDT, cfg.press_the_winned_USDT, cfg.press_the_winned_thres) +\
+                    '\tLeverage: {}\n\tOperate side: {}\n\tTP: {}%\n\tSL: {}%\n'.format(cfg.Leverage, cfg.side, cfg.TP_percentage, cfg.SL_percentage) +\
+                    '\tTPSL trigger: {}\n\tTrailing stop: {}%\n'.format(cfg.Trigger, cfg.Trailing_Stop) +\
+                    '\tPosition_expire_time: {}s\n\tPosition_expire_thres_percentag: {}%\n'.format(cfg.position_expire_time, cfg.position_expire_thres) +\
+                    '\tOperate group: {}\n\tOpen order interval: {}s\n\tPolling interval: {}s\n'.format(cfg.Group, cfg.open_order_interval, cfg.poll_order_interval) +\
+                    '\tDetention_time: {}s'.format(cfg.detention_time))
+
+            ##############################################################################################################################
+            ### Load history pnl data and init log    
+            pnl = PNL_data('pnl')
+            pnl.load()
+            ##############################################################################################################################
+            ### Load Symbol List
+            if not os.path.isfile('Symbol_list.json'):
+                if Update_Symbol_List.Query_USDT_Perpetual_Symbol():
+                    with open('Symbol_list.json', 'r') as file:
+                        Symbol_query = json.load(file)
+            else:    
                 with open('Symbol_list.json', 'r') as file:
                     Symbol_query = json.load(file)
 
-    ##############################################################################################################################
-    ### Create client
-    if cfg.Test_net:
-        # main net api and serect were passed
-        log.log('Run on Test Net !!!')
-        client = Client('https://api-testnet.bybit.com', api_key = sys.argv[1], api_secret = sys.argv[2])
-    else:
-        # main net api and serect were passed
-        log.log('Run on Main Net !!!')
-        client = Client('https://api.bybit.com', api_key = sys.argv[1], api_secret = sys.argv[2])
+                if Symbol_query['version'] != Update_Symbol_List.Symbol_list_ver:
+                    if Update_Symbol_List.Query_USDT_Perpetual_Symbol():
+                        with open('Symbol_list.json', 'r') as file:
+                            Symbol_query = json.load(file)
 
-    ### Check Sym list
-    if cfg.Group == 'all':
-        for i in Symbol_query['data']:
-            if not i['name'] in cfg.Black_list:
-                Symbol_List[i['name']] = {
-                    'tick_size' : float(i['price_filter']['tick_size']),
-                    'qty_step' : float(i['lot_size_filter']['qty_step']),
-                    'opened' : False,
-                    'isolate' : False,
-                    'leverage' : 0,
-                    'tpsl_mode' : 'Partial'
-                }
-    else:
-        for i in Symbol_query['data']:
-            if i['name'] in cfg.Token_list and not i['name'] in cfg.Black_list:
-                Symbol_List[i['name']] = {
-                    'tick_size' : float(i['price_filter']['tick_size']),
-                    'qty_step' : float(i['lot_size_filter']['qty_step']),
-                    'opened' : False,
-                    'isolate' : False,
-                    'leverage' : 0,
-                    'tpsl_mode' : 'Partial'
-                }
-    del Symbol_query
-
-    while True:
-        log.log_and_show(log.get_run_time(pnl.start_time))
-
-        ### Check if eligible symbol qty exceed max operated qty
-        if cfg.Max_operate_position > len(Symbol_List):
-            if Max_operate_position > len(Symbol_List):
-                System_Msg('Max_operate_position exceed symbol white list qty\nDecrease Max_operate_position form {} to {}'\
-                            .format(Max_operate_position, len(Symbol_List)))
-                Max_operate_position = len(Symbol_List)
-            elif Max_operate_position < len(Symbol_List):
-                System_Msg('Symbol white list qty added\nIncrease Max_operate_position form {} to {}'\
-                            .format(Max_operate_position, len(Symbol_List)))
-                Max_operate_position = len(Symbol_List)
-        elif cfg.Max_operate_position != Max_operate_position:
-            Max_operate_position = cfg.Max_operate_position
-
-
-
-        ### Query current wallet balance
-        wallet = client.get_wallet_balance()
-        if wallet != False:
-            wallet_available = wallet['available_balance']
-            wallet_equity = wallet['equity']
-            # wallet_real_pnl = wallet['realised_pnl']
-            # wallet_cum_pnl = wallet['cum_realised_pnl']
-
-            if pnl.start_balance == 'start':
-                pnl.start_balance = wallet_equity
-
-            pnl.current_balance = wallet_equity
-            pnl.total_pnl = pnl.current_balance - pnl.start_balance
-            if pnl.start_balance != 0:
-                pnl.total_pnl_rate = pnl.total_pnl * 100 / pnl.start_balance
+            ##############################################################################################################################
+            ### Create client
+            if cfg.Test_net:
+                # main net api and serect were passed
+                log.log('Run on Test Net !!!')
+                client = Client('https://api-testnet.bybit.com', api_key = sys.argv[1], api_secret = sys.argv[2])
             else:
-                pnl.total_pnl_rate = 0
+                # main net api and serect were passed
+                log.log('Run on Main Net !!!')
+                client = Client('https://api.bybit.com', api_key = sys.argv[1], api_secret = sys.argv[2])
 
-            pnl.write_pnl()
-            pnl.record_balance()
-            
-            log.log_and_show('Start wallet balance: {: 13.2f}\tUSDT\n'.format(pnl.start_balance) +\
-                             'Balance available:\t {: 13.2f}\tUSDT\nBalance equity:\t {: 13.2f}\tUSDT\n'.format(wallet_available, wallet_equity) +\
-                             'Unrealized pnl:\t {: 13.2f}\tUSDT, {: .2f}%\nWin rate:\t\t\t{: .2f}\t%'.format(pnl.total_pnl, pnl.total_pnl_rate, pnl.win_rate))
-            log.show('')
+            ### Check Sym list
+            if cfg.Group == 'all':
+                for i in Symbol_query['data']:
+                    if not i['name'] in cfg.Black_list:
+                        Symbol_List[i['name']] = {
+                            'tick_size' : float(i['price_filter']['tick_size']),
+                            'qty_step' : float(i['lot_size_filter']['qty_step']),
+                            'opened' : False,
+                            'isolate' : False,
+                            'leverage' : 0,
+                            'tpsl_mode' : 'Partial'
+                        }
+            else:
+                for i in Symbol_query['data']:
+                    if i['name'] in cfg.Token_list and not i['name'] in cfg.Black_list:
+                        Symbol_List[i['name']] = {
+                            'tick_size' : float(i['price_filter']['tick_size']),
+                            'qty_step' : float(i['lot_size_filter']['qty_step']),
+                            'opened' : False,
+                            'isolate' : False,
+                            'leverage' : 0,
+                            'tpsl_mode' : 'Partial'
+                        }
+            del Symbol_query
 
-            if wallet_available < cfg.stop_operate_USDT:
-                Pause_place_order = True
-            else:
-                Pause_place_order = False
+            while True:
+                log.log_and_show(log.get_run_time(pnl.start_time))
 
-        del wallet
+                ### Check if eligible symbol qty exceed max operated qty
+                if cfg.Max_operate_position > len(Symbol_List):
+                    if Max_operate_position > len(Symbol_List):
+                        System_Msg('Max_operate_position exceed symbol white list qty\nDecrease Max_operate_position form {} to {}'\
+                                    .format(Max_operate_position, len(Symbol_List)))
+                        Max_operate_position = len(Symbol_List)
+                    elif Max_operate_position < len(Symbol_List):
+                        System_Msg('Symbol white list qty added\nIncrease Max_operate_position form {} to {}'\
+                                    .format(Max_operate_position, len(Symbol_List)))
+                        Max_operate_position = len(Symbol_List)
+                elif cfg.Max_operate_position != Max_operate_position:
+                    Max_operate_position = cfg.Max_operate_position
 
-        ### Query current position
-        current_position_qty = 0
-        current_position_buy = 0
-        current_position_sell = 0
-        Position_List = {}
-        opened_position = {}
-        
-        position = client.get_all_position()
-        
-        for i in position['result']:
-            if i['is_valid']:
-                if not i['data']['symbol'] in Position_List:
-                    Position_List[i['data']['symbol']] = {i['data']['side'] : i['data']}
-                else:
-                    Position_List[i['data']['symbol']][i['data']['side']] = i['data']
-            else:
-                Error_Msg('{} {} position data NOT valid'.format(i['data'][' '], i['data']['side']))
-        
-        ### Chek position status
-        for i in Position_List:
-            temp = Symbol_List.get(i, False)
-            if temp == False:
-                continue
 
-            if Position_List[i]['Buy']['is_isolated'] and Position_List[i]['Sell']['is_isolated']:
-                temp['isolate'] = True
-            else:
-                temp['isolate'] = False
-            
-            if Position_List[i]['Buy']['leverage'] == cfg.Leverage and Position_List[i]['Sell']['leverage'] == cfg.Leverage:
-                temp['leverage'] = cfg.Leverage
-            else:
-                temp['leverage'] = 0
 
-            if Position_List[i]['Buy']['tp_sl_mode'] == 'Full' and Position_List[i]['Sell']['tp_sl_mode'] == 'Full':
-                temp['tpsl_mode'] = 'Full'
-            else:
-                temp['tpsl_mode'] = 'Partial'
-            
-            if Position_List[i]['Buy']['position_value'] > 0:
-                temp['opened'] = True
-                opened_position[i] = {'side' : 'Buy'}
-            elif Position_List[i]['Sell']['position_value'] > 0:
-                temp['opened'] = True
-                opened_position[i] = {'side' : 'Sell'}
-            else:
-                temp['opened'] = False
-            Symbol_List[i] = temp
+                ### Query current wallet balance
+                wallet = client.get_wallet_balance()
+                if wallet != False:
+                    wallet_available = wallet['available_balance']
+                    wallet_equity = wallet['equity']
+                    # wallet_real_pnl = wallet['realised_pnl']
+                    # wallet_cum_pnl = wallet['cum_realised_pnl']
+
+                    if pnl.start_balance == 'start':
+                        pnl.start_balance = wallet_equity
+
+                    pnl.current_balance = wallet_equity
+                    pnl.total_pnl = pnl.current_balance - pnl.start_balance
+                    if pnl.start_balance != 0:
+                        pnl.total_pnl_rate = pnl.total_pnl * 100 / pnl.start_balance
+                    else:
+                        pnl.total_pnl_rate = 0
+
+                    pnl.write_pnl()
+                    pnl.record_balance()
                     
-        ### track opened position
-        if len(pnl.track_list) == 0 and len(opened_position) != 0:
-            # start peogram with on going position
-            if not pnl.load_position_list():
-                pnl.track_list = opened_position
-                for i in pnl.track_list:
-                    if not 'time' in pnl.track_list[i]:
-                        pnl.track_list[i]['time'] = int(time())
-                    if not 'pressed' in pnl.track_list[i]:
-                        pnl.track_list[i]['pressed'] = False
+                    log.log_and_show('Start wallet balance: {: 13.2f}\tUSDT\n'.format(pnl.start_balance) +\
+                                    'Balance available:\t {: 13.2f}\tUSDT\nBalance equity:\t {: 13.2f}\tUSDT\n'.format(wallet_available, wallet_equity) +\
+                                    'Unrealized pnl:\t {: 13.2f}\tUSDT, {: .2f}%\nWin rate:\t\t\t{: .2f}\t%'.format(pnl.total_pnl, pnl.total_pnl_rate, pnl.win_rate))
+                    log.show('')
 
-            if len(opened_position) >= Max_operate_position:
-                # position opening done start track
-                pnl.start_track_pnl = True
-        
-        delete_list = []
-        if pnl.start_track_pnl:
-            pnl.load_position_list()
+                    if wallet_available < cfg.stop_operate_USDT:
+                        Pause_place_order = True
+                    else:
+                        Pause_place_order = False
 
-            for i in pnl.track_list:
-                if i in opened_position:
-                    # position still going                   
-                    price = client.get_last_price(i)
-                    if price == False:
-                        del price
-                        delay.delay(0.1)
+                del wallet
+
+                ### Query current position
+                current_position_qty = 0
+                current_position_buy = 0
+                current_position_sell = 0
+                Position_List = {}
+                opened_position = {}
+                
+                position = client.get_all_position()
+                
+                for i in position['result']:
+                    if i['is_valid']:
+                        if not i['data']['symbol'] in Position_List:
+                            Position_List[i['data']['symbol']] = {i['data']['side'] : i['data']}
+                        else:
+                            Position_List[i['data']['symbol']][i['data']['side']] = i['data']
+                    else:
+                        Error_Msg('{} {} position data NOT valid'.format(i['data'][' '], i['data']['side']))
+                
+                ### Chek position status
+                for i in Position_List:
+                    temp = Symbol_List.get(i, False)
+                    if temp == False:
                         continue
+
+                    if Position_List[i]['Buy']['is_isolated'] and Position_List[i]['Sell']['is_isolated']:
+                        temp['isolate'] = True
+                    else:
+                        temp['isolate'] = False
                     
-                    match cfg.Trigger:
-                        case 'LastPrice':
-                            posi_pnl = float(price['last_price']) - Position_List[i][pnl.track_list[i]['side']]['entry_price']
-                        case 'MarkPrice':
-                            posi_pnl = float(price['mark_price']) - Position_List[i][pnl.track_list[i]['side']]['entry_price']
-                        case 'IndexPrice':
-                            posi_pnl = float(price['index_price']) - Position_List[i][pnl.track_list[i]['side']]['entry_price']
-                        
-                    posi_pnl = posi_pnl * cfg.Leverage * 100 / Position_List[i][pnl.track_list[i]['side']]['entry_price']
+                    if Position_List[i]['Buy']['leverage'] == cfg.Leverage and Position_List[i]['Sell']['leverage'] == cfg.Leverage:
+                        temp['leverage'] = cfg.Leverage
+                    else:
+                        temp['leverage'] = 0
 
-                    if pnl.track_list[i]['side'] == 'Sell':
-                        posi_pnl *= -1
-
-                    last_price = float(price['last_price'])
-                    mark_price = float(price['mark_price'])
-                    del price
-
-                    if cfg.position_expire_time != 0 and (time() - pnl.track_list[i]['time']) > cfg.position_expire_time:
-                        # position expire if position_expire_time had set, check pnl
-                        if posi_pnl < cfg.position_expire_thres:
-                            # pnl lesser than threshold, start closaing it
-                            log.log_and_show('{} {} position expired, pnl {: .2f}%'.format(i, pnl.track_list[i]['side'], posi_pnl))
-                            place_order = client.place_order(i, pnl.track_list[i]['side'],  Position_List[i][pnl.track_list[i]['side']]['size'], 0, 0, True)
-                            if place_order == False or place_order == '130023':
-                                # Will lqt right after position placed
-                                del place_order
-                                continue
-                            elif place_order == '130021':
-                                # Under balance, stop open order
-                                Pause_place_order = True
-                                del place_order
-                                continue
-                            else:
-                                if place_order['ret_msg'] != 'OK':
-                                    System_Msg('{} close order create successfully !!\nwith return msg: {}'.format(i, place_order['ret_msg']))
-                                else:
-                                    log.log_and_show('{} close order create successfully !!'.format(i))
-
-                            retry = 10
-                            while retry:
-                                order_status = client.get_order_status(i, place_order['result']['order_id'], )
-                                if order_status != False:
-                                    match order_status:
-                                        case 'Filled':
-                                            break
-                                        case 'Rejected' | 'Cancelled':
-                                            retry = 0
-                                            break
-                                        case _:
-                                            pass
-
-                                    retry -= 1
-                                    del order_status
-                                    delay.delay(0.2)
-                                else:
-                                    break
-
-                            if retry == 0:
-                                # retry fail or error
-                                Error_Msg('Close {} position order Fail!! order_status: {}'.format(i, order_status))
-                                del order_status
-                                del place_order
-                                del retry
-                                continue
-                            del retry
-
-                            log.log_and_show('Close {} position successfully !!'.format(i))
+                    if Position_List[i]['Buy']['tp_sl_mode'] == 'Full' and Position_List[i]['Sell']['tp_sl_mode'] == 'Full':
+                        temp['tpsl_mode'] = 'Full'
+                    else:
+                        temp['tpsl_mode'] = 'Partial'
+                    
+                    if Position_List[i]['Buy']['position_value'] > 0:
+                        temp['opened'] = True
+                        opened_position[i] = {'side' : 'Buy'}
+                    elif Position_List[i]['Sell']['position_value'] > 0:
+                        temp['opened'] = True
+                        opened_position[i] = {'side' : 'Sell'}
+                    else:
+                        temp['opened'] = False
+                    Symbol_List[i] = temp
                             
+                ### track opened position
+                if len(pnl.track_list) == 0 and len(opened_position) != 0:
+                    # start peogram with on going position
+                    if not pnl.load_position_list():
+                        pnl.track_list = opened_position
+                        for i in pnl.track_list:
+                            if not 'time' in pnl.track_list[i]:
+                                pnl.track_list[i]['time'] = int(time())
+                            if not 'pressed' in pnl.track_list[i]:
+                                pnl.track_list[i]['pressed'] = False
+
+                    if len(opened_position) >= Max_operate_position:
+                        # position opening done start track
+                        pnl.start_track_pnl = True
+                
+                delete_list = []
+                if pnl.start_track_pnl:
+                    pnl.load_position_list()
+
+                    for i in pnl.track_list:
+                        if i in opened_position:
+                            # position still going                   
+                            price = client.get_last_price(i)
+                            if price == False:
+                                del price
+                                delay.delay(0.1)
+                                continue
+                            
+                            match cfg.Trigger:
+                                case 'LastPrice':
+                                    posi_pnl = float(price['last_price']) - Position_List[i][pnl.track_list[i]['side']]['entry_price']
+                                case 'MarkPrice':
+                                    posi_pnl = float(price['mark_price']) - Position_List[i][pnl.track_list[i]['side']]['entry_price']
+                                case 'IndexPrice':
+                                    posi_pnl = float(price['index_price']) - Position_List[i][pnl.track_list[i]['side']]['entry_price']
+                                
+                            posi_pnl = posi_pnl * cfg.Leverage * 100 / Position_List[i][pnl.track_list[i]['side']]['entry_price']
+
+                            if pnl.track_list[i]['side'] == 'Sell':
+                                posi_pnl *= -1
+
+                            last_price = float(price['last_price'])
+                            mark_price = float(price['mark_price'])
+                            del price
+
+                            if cfg.position_expire_time != 0 and (time() - pnl.track_list[i]['time']) > cfg.position_expire_time:
+                                # position expire if position_expire_time had set, check pnl
+                                if posi_pnl < cfg.position_expire_thres:
+                                    # pnl lesser than threshold, start closaing it
+                                    log.log_and_show('{} {} position expired, pnl {: .2f}%'.format(i, pnl.track_list[i]['side'], posi_pnl))
+                                    place_order = client.place_order(i, pnl.track_list[i]['side'],  Position_List[i][pnl.track_list[i]['side']]['size'], 0, 0, True)
+                                    if place_order == False or place_order == '130023':
+                                        # Will lqt right after position placed
+                                        del place_order
+                                        continue
+                                    elif place_order == '130021':
+                                        # Under balance, stop open order
+                                        Pause_place_order = True
+                                        del place_order
+                                        continue
+                                    else:
+                                        if place_order['ret_msg'] != 'OK':
+                                            System_Msg('{} close order create successfully !!\nwith return msg: {}'.format(i, place_order['ret_msg']))
+                                        else:
+                                            log.log_and_show('{} close order create successfully !!'.format(i))
+                                    
+                                    retry = Retry_times
+                                    while retry:
+                                        order_status = client.get_order_status(i, place_order['result']['order_id'], )
+                                        if order_status != False:
+                                            match order_status:
+                                                case 'Filled':
+                                                    log.log('{} {} order ''{}'' Filled, retry: {} times'.format(i, pnl.track_list[i]['side'], place_order['result']['order_id'], Retry_times - retry))
+                                                    break
+                                                case 'Rejected' | 'Cancelled':
+                                                    retry = 0
+                                                    break
+                                                case _:
+                                                    pass
+
+                                            retry -= 1
+                                            delay.delay(Retry_delay)
+                                        else:
+                                            break
+
+                                    if retry == 0:
+                                        # retry fail or error
+                                        Error_Msg('Close {} position order Fail!! retry: {}, order_status: {}'.format(i, Retry_times, order_status))
+                                        del order_status
+                                        del place_order
+                                        del retry
+                                        continue
+                                    del retry
+
+                                    log.log_and_show('Close {} position successfully !!'.format(i))
+                                    
+                                    closed_pnl = client.get_last_closed_pnl(i)
+                                    if closed_pnl != False:
+                                        pnl.closed_position += 1
+                                        if closed_pnl > 0:
+                                            pnl.win_position += 1
+                                        
+                                        pnl.win_rate = pnl.win_position * 100 / pnl.closed_position
+
+                                    del closed_pnl
+                                    del order_status
+                                    del place_order
+                                    delete_list.append(i)
+                                    delay.delay(cfg.open_order_interval)
+                                else:
+                                    # pnl larger than threshold, renew the time
+                                    pnl.track_list[i]['time'] = int(time())
+                                
+                            if cfg.press_the_winned_USDT > 0 and not pnl.track_list[i]['pressed'] and posi_pnl > cfg.press_the_winned_thres:
+                                # position still going and need to press the win
+                                if not Pause_place_order:
+                                    log.log_and_show('Add {}\tUSDT to {}\t{} position'.format(cfg.press_the_winned_USDT, i,  pnl.track_list[i]['side']))
+                                    
+                                    # Check if MarkPrice and LadtPrice detach exceed SL or TP do not press
+                                    detach_percentage = abs(last_price - mark_price) / last_price * 100 * cfg.Leverage
+                                    if detach_percentage > cfg.SL_percentage or detach_percentage > cfg.TP_percentage:
+                                        System_Msg('{} MarkPrice and LadtPrice detach exceed too much\nDon''t press'.format(i))
+                                        del last_price
+                                        del mark_price
+                                        del detach_percentage
+                                        continue
+
+                                    qty = qty_trim((cfg.press_the_winned_USDT * cfg.Leverage / last_price), Symbol_List[i]['qty_step'])
+                                    del last_price
+                                    del mark_price
+                                    del detach_percentage
+
+                                    place_order = client.place_order(i, pnl.track_list[i]['side'], qty, Position_List[i][pnl.track_list[i]['side']]['take_profit'], Position_List[i][pnl.track_list[i]['side']]['stop_loss'])
+                                    if place_order == False or place_order == '130023':
+                                        # Will lqt right after position placed
+                                        del place_order
+                                        continue
+                                    elif place_order == '130021':
+                                        # Under balance, stop open order
+                                        Pause_place_order = True
+                                        del place_order
+                                        continue
+                                    else:
+                                        del qty
+                                        if place_order['ret_msg'] != 'OK':
+                                            System_Msg('{} press order create successfully !!\nwith return msg: {}'.format(i, place_order['ret_msg']))
+                                        else:
+                                            log.log_and_show('{} press order create successfully !!'.format(i))
+
+                                    retry = Retry_times
+                                    while retry:
+                                        order_status = client.get_order_status(i, place_order['result']['order_id'], )
+                                        if order_status != False:
+                                            match order_status:
+                                                case 'Filled':
+                                                    log.log('{} {} order ''{}'' Filled, retry: {} times'.format(i, pnl.track_list[i]['side'], place_order['result']['order_id'], Retry_times - retry))
+                                                    break
+                                                case 'Rejected' | 'Cancelled':
+                                                    retry = 0
+                                                    break
+                                                case _:
+                                                    pass
+
+                                            retry -= 1
+                                            delay.delay(Retry_delay)
+                                        else:
+                                            break
+
+                                    if retry == 0:
+                                        # retry fail or error
+                                        Error_Msg('Press {} position order Fail!! retry: {}, order_status: {}'.format(i, Retry_times, order_status))
+                                        del order_status
+                                        del place_order
+                                        del retry
+                                        continue
+                                    del retry
+
+                                    log.log_and_show('Press {}\t{} position successfully !!'.format(i, pnl.track_list[i]['side']))
+                                    del order_status
+                                    del place_order
+                                    pnl.track_list[i]['pressed'] = True
+                                    delay.delay(cfg.open_order_interval)
+                                
+                                else:
+                                    log.log_and_show('Under balance for press the winned', format(i, pnl.track_list[i]['side']))
+
+                            pnl.track_list[i]['pnl'] = posi_pnl
+                            del posi_pnl
+                            delay.delay(0.1)
+                            
+                        else:
+                            # position  closed
                             closed_pnl = client.get_last_closed_pnl(i)
                             if closed_pnl != False:
                                 pnl.closed_position += 1
@@ -671,327 +773,224 @@ def main():
                                     pnl.win_position += 1
                                 
                                 pnl.win_rate = pnl.win_position * 100 / pnl.closed_position
-
+                                log.log_and_show('{}\t{} position was cloasd, pnl: {} USDT'.format(i, pnl.track_list[i]['side'], closed_pnl))
+                                delete_list.append(i)
                             del closed_pnl
-                            del order_status
-                            del place_order
-                            delete_list.append(i)
-                            delay.delay(cfg.open_order_interval)
-                        else:
-                            # pnl larger than threshold, renew the time
-                            pnl.track_list[i]['time'] = int(time())
-                        
-                    if cfg.press_the_winned_USDT > 0 and not pnl.track_list[i]['pressed'] and posi_pnl > cfg.press_the_winned_thres:
-                        # position still going and need to press the win
-                        if not Pause_place_order:
-                            log.log_and_show('Add {}\tUSDT to {}\t{} position'.format(cfg.press_the_winned_USDT, i,  pnl.track_list[i]['side']))
-                            
-                            # Check if MarkPrice and LadtPrice detach exceed SL or TP do not press
-                            detach_percentage = abs(last_price - mark_price) / last_price * 100 * cfg.Leverage
-                            if detach_percentage > cfg.SL_percentage or detach_percentage > cfg.TP_percentage:
-                                System_Msg('{} MarkPrice and LadtPrice detach exceed too much\nDon''t press'.format(i))
-                                del last_price
-                                del mark_price
-                                del detach_percentage
-                                continue
+                
+                for i in delete_list:
+                    del pnl.track_list[i]
 
-                            qty = qty_trim((cfg.press_the_winned_USDT * cfg.Leverage / last_price), Symbol_List[i]['qty_step'])
-                            del last_price
-                            del mark_price
-                            del detach_percentage
+                del delete_list
+                del opened_position
+                del position
+                del Position_List
 
-                            place_order = client.place_order(i, pnl.track_list[i]['side'], qty, Position_List[i][pnl.track_list[i]['side']]['take_profit'], Position_List[i][pnl.track_list[i]['side']]['stop_loss'])
-                            if place_order == False or place_order == '130023':
-                                # Will lqt right after position placed
-                                del place_order
-                                continue
-                            elif place_order == '130021':
-                                # Under balance, stop open order
-                                Pause_place_order = True
-                                del place_order
-                                continue
-                            else:
-                                del qty
-                                if place_order['ret_msg'] != 'OK':
-                                    System_Msg('{} press order create successfully !!\nwith return msg: {}'.format(i, place_order['ret_msg']))
-                                else:
-                                    log.log_and_show('{} press order create successfully !!'.format(i))
+                current_position_qty = len(pnl.track_list)
+                for i in pnl.track_list:
+                    if pnl.track_list[i]['side'] == 'Buy':
+                        current_position_buy += 1
+                    elif pnl.track_list[i]['side'] == 'Sell':
+                        current_position_sell += 1
 
-                            retry = 10
-                            while retry:
-                                order_status = client.get_order_status(i, place_order['result']['order_id'], )
-                                if order_status != False:
-                                    match order_status:
-                                        case 'Filled':
-                                            break
-                                        case 'Rejected' | 'Cancelled':
-                                            retry = 0
-                                            break
-                                        case _:
-                                            pass
-
-                                    retry -= 1
-                                    del order_status
-                                    delay.delay(0.2)
-                                else:
-                                    break
-
-                            if retry == 0:
-                                # retry fail or error
-                                Error_Msg('Press {} position order Fail!! order_status: {}'.format(i, order_status))
-                                del order_status
-                                del place_order
-                                del retry
-                                continue
-                            del retry
-
-                            log.log_and_show('Press {}\t{} position successfully !!'.format(i, pnl.track_list[i]['side']))
-                            del order_status
-                            del place_order
-                            pnl.track_list[i]['pressed'] = True
-                            delay.delay(cfg.open_order_interval)
-                        
-                        else:
-                            log.log_and_show('Under balance for press the winned', format(i, pnl.track_list[i]['side']))
-
-                    pnl.track_list[i]['pnl'] = posi_pnl
-                    del posi_pnl
-                    delay.delay(0.1)
-                    
-                else:
-                    # position  closed
-                    closed_pnl = client.get_last_closed_pnl(i)
-                    if closed_pnl != False:
-                        pnl.closed_position += 1
-                        if closed_pnl > 0:
-                            pnl.win_position += 1
-                        
-                        pnl.win_rate = pnl.win_position * 100 / pnl.closed_position
-                        log.log_and_show('{}\t{} position was cloasd, pnl: {} USDT'.format(i, pnl.track_list[i]['side'], closed_pnl))
-                        delete_list.append(i)
-                    del closed_pnl
-        
-        for i in delete_list:
-            del pnl.track_list[i]
-
-        del delete_list
-        del opened_position
-        del position
-        del Position_List
-
-        current_position_qty = len(pnl.track_list)
-        for i in pnl.track_list:
-            if pnl.track_list[i]['side'] == 'Buy':
-                current_position_buy += 1
-            elif pnl.track_list[i]['side'] == 'Sell':
-                current_position_sell += 1
-
-        pnl.write_pnl()
-        pnl.write_position_list()
-        
-        show = 'Opened Position: {}\tBuy: {} Sell: {}\n'.format(current_position_qty, current_position_buy, current_position_sell)        
-        if pnl.start_track_pnl:
-            for i in pnl.track_list:
-                show += '\t{} \t{} \t{: 7.2f}% \t{}\n'.format(i, pnl.track_list[i]['side'], pnl.track_list[i]['pnl'], timestamp_format(pnl.track_list[i]['time']))
-        log.log_and_show(show)
-        del show
-        
-        ### Randonly open position
-        if not Pause_place_order and current_position_qty < Max_operate_position:
-            if pnl.start_track_pnl:
-                pnl.start_track_pnl = False
-            order = Open()
-
-            # Random pick
-            order.sym = rand_symbol()
-            if cfg.side == 'Both':
-                order.side = rand_side()
-            else:
-                order.side = cfg.side
-
-            # Set Full Position TP/SL
-            if Symbol_List[order.sym]['tpsl_mode'] != 'Full':
-                if client.set_tpsl_mode(order.sym) == True:
-                    Symbol_List[order.sym]['tpsl_mode'] = 'Full'
-                else:
-                    Detention_List[order.sym] = {'data' : Symbol_List.pop(order.sym), 'time' : int(time())}
-                    System_Msg('Put {} into detention'. format(order.sym))
-                    del order
-                    delay.delay(cfg.open_order_interval)
-                    continue
-
-            # Switch to isolated margin mode and set leverage
-            if Symbol_List[order.sym]['isolate'] != True:
-                if client.set_margin_mode(order.sym, True, cfg.Leverage) == True:
-                    Symbol_List[order.sym]['isolate'] = True
-                    Symbol_List[order.sym]['leverage'] = cfg.Leverage
-                else:
-                    Detention_List[order.sym] = {'data' : Symbol_List.pop(order.sym), 'time' : int(time())}
-                    System_Msg('Put {} into detention'. format(order.sym))
-                    del order
-                    delay.delay(cfg.open_order_interval)
-                    continue
-
-            # Modify leverage
-            if Symbol_List[order.sym]['leverage'] != cfg.Leverage:
-                if client.set_leverage(order.sym, cfg.Leverage) == True:
-                    Symbol_List[order.sym]['leverage'] = cfg.Leverage
-                else:
-                    Detention_List[order.sym] = {'data' : Symbol_List.pop(order.sym), 'time' : int(time())}
-                    System_Msg('Put {} into detention'. format(order.sym))
-                    del order
-                    delay.delay(cfg.open_order_interval)
-                    continue
-
-            # Query price
-            price = client.get_last_price(order.sym)
-            if price == False:
-                Detention_List[order.sym] = {'data' : Symbol_List.pop(order.sym), 'time' : int(time())}
-                System_Msg('Put {} into detention'. format(order.sym))
-                del order
-                delay.delay(cfg.open_order_interval)
-                continue
-            
-            order.last_price = float(price['last_price'])
-            order.mark_price = float(price['mark_price'])
-            del price
-
-            # Check if MarkPrice and LadtPrice detach exceed SL or TP, put into to detention
-            detach_percentage = abs(order.last_price - order.mark_price) / order.last_price * 100 * cfg.Leverage
-            if detach_percentage > cfg.SL_percentage or detach_percentage > cfg.TP_percentage:
-                Detention_List[order.sym] = {'data' : Symbol_List.pop(order.sym), 'time' : int(time())}
-                System_Msg('MarkPrice and LadtPrice detach exceed too much\nPut {} into detention'. format(order.sym))
-                del order
-                del detach_percentage
-                delay.delay(cfg.open_order_interval)
-                continue
-            del detach_percentage
-
-            # Calculate rough TP/SL and qty
-            order.qty = qty_trim((cfg.operate_USDT * cfg.Leverage / order.last_price), Symbol_List[order.sym]['qty_step'])
-            if order.side == 'Buy':
-                order.TP = price_trim((1 + (cfg.TP_percentage / cfg.Leverage / 100)) * order.last_price, Symbol_List[order.sym]['tick_size'])
-                order.SL = price_trim((1 - (cfg.SL_percentage / cfg.Leverage / 100)) * order.last_price, Symbol_List[order.sym]['tick_size'])
-            elif order.side == 'Sell':
-                order.TP = price_trim((1 - (cfg.TP_percentage / cfg.Leverage / 100)) * order.last_price, Symbol_List[order.sym]['tick_size'])
-                order.SL = price_trim((1 + (cfg.SL_percentage / cfg.Leverage / 100)) * order.last_price, Symbol_List[order.sym]['tick_size'])
-            
-            log.log_and_show('Opening {} {} {} position at about {}'.format(order.qty, order.sym, order.side, order.last_price))
-
-            # Open order
-            place_order = client.place_order(order.sym, order.side, order.qty, order.TP, order.SL)
-            if place_order == False or place_order == '130023':
-                # Will lqt right after position placed, black list this one
-                Detention_List[order.sym] = {'data' : Symbol_List.pop(order.sym), 'time' : int(time())}
-                System_Msg('Put {} into detention'. format(order.sym))
-                del order
-                delay.delay(cfg.open_order_interval)
-                continue
-            elif place_order == '130021':
-                # Under balance, stop open order
-                Pause_place_order = True
-                del order
-                delay.delay(cfg.open_order_interval)
-                continue
-            else:
-                if place_order['ret_msg'] != 'OK':
-                    System_Msg('{} {} order create successfully !!\nwith return msg: {}'.format(order.sym, order.side, place_order['ret_msg']))
-                else:
-                    log.log_and_show('{} {} order create successfully !!'.format(order.sym, order.side))
-
-                order.order_id = place_order['result']['order_id']
-                pnl.track_list[order.sym] = {'time' : int(time()), 'side' : order.side, 'pressed' : False}
+                pnl.write_pnl()
                 pnl.write_position_list()
-                del place_order
+                
+                show = 'Opened Position: {}\tBuy: {} Sell: {}\n'.format(current_position_qty, current_position_buy, current_position_sell)        
+                if pnl.start_track_pnl:
+                    for i in pnl.track_list:
+                        show += '\t{} \t{} \t{: 7.2f}% \t{}\n'.format(i, pnl.track_list[i]['side'], pnl.track_list[i]['pnl'], timestamp_format(pnl.track_list[i]['time']))
+                log.log_and_show(show)
+                del show
+                
+                ### Randonly open position
+                if not Pause_place_order and current_position_qty < Max_operate_position:
+                    if pnl.start_track_pnl:
+                        pnl.start_track_pnl = False
+                    order = Open()
 
-            # Get newly placed order status
-            retry = 10
-            while retry:
-                order_status = client.get_order_status(order.sym, order.order_id)
-                if order_status != False:
-                    match order_status:
-                        case 'Filled':
-                            break
-                        case 'Rejected' | 'Cancelled':
-                            retry = 0
-                            break
-                        case _:
-                            pass
+                    # Random pick
+                    order.sym = rand_symbol()
+                    if cfg.side == 'Both':
+                        order.side = rand_side()
+                    else:
+                        order.side = cfg.side
 
-                    retry -= 1
-                    del order_status
-                    delay.delay(0.2)
+                    # Set Full Position TP/SL
+                    if Symbol_List[order.sym]['tpsl_mode'] != 'Full':
+                        if client.set_tpsl_mode(order.sym) == True:
+                            Symbol_List[order.sym]['tpsl_mode'] = 'Full'
+                        else:
+                            Detention_List[order.sym] = {'data' : Symbol_List.pop(order.sym), 'time' : int(time())}
+                            System_Msg('Put {} into detention'. format(order.sym))
+                            del order
+                            delay.delay(cfg.open_order_interval)
+                            continue
+
+                    # Switch to isolated margin mode and set leverage
+                    if Symbol_List[order.sym]['isolate'] != True:
+                        if client.set_margin_mode(order.sym, True, cfg.Leverage) == True:
+                            Symbol_List[order.sym]['isolate'] = True
+                            Symbol_List[order.sym]['leverage'] = cfg.Leverage
+                        else:
+                            Detention_List[order.sym] = {'data' : Symbol_List.pop(order.sym), 'time' : int(time())}
+                            System_Msg('Put {} into detention'. format(order.sym))
+                            del order
+                            delay.delay(cfg.open_order_interval)
+                            continue
+
+                    # Modify leverage
+                    if Symbol_List[order.sym]['leverage'] != cfg.Leverage:
+                        if client.set_leverage(order.sym, cfg.Leverage) == True:
+                            Symbol_List[order.sym]['leverage'] = cfg.Leverage
+                        else:
+                            Detention_List[order.sym] = {'data' : Symbol_List.pop(order.sym), 'time' : int(time())}
+                            System_Msg('Put {} into detention'. format(order.sym))
+                            del order
+                            delay.delay(cfg.open_order_interval)
+                            continue
+
+                    # Query price
+                    price = client.get_last_price(order.sym)
+                    if price == False:
+                        Detention_List[order.sym] = {'data' : Symbol_List.pop(order.sym), 'time' : int(time())}
+                        System_Msg('Put {} into detention'. format(order.sym))
+                        del order
+                        delay.delay(cfg.open_order_interval)
+                        continue
+                    
+                    order.last_price = float(price['last_price'])
+                    order.mark_price = float(price['mark_price'])
+                    del price
+
+                    # Check if MarkPrice and LadtPrice detach exceed SL or TP, put into to detention
+                    detach_percentage = abs(order.last_price - order.mark_price) / order.last_price * 100 * cfg.Leverage
+                    if detach_percentage > cfg.SL_percentage or detach_percentage > cfg.TP_percentage:
+                        Detention_List[order.sym] = {'data' : Symbol_List.pop(order.sym), 'time' : int(time())}
+                        System_Msg('MarkPrice and LadtPrice detach exceed too much\nPut {} into detention'. format(order.sym))
+                        del order
+                        del detach_percentage
+                        delay.delay(cfg.open_order_interval)
+                        continue
+                    del detach_percentage
+
+                    # Calculate rough TP/SL and qty
+                    order.qty = qty_trim((cfg.operate_USDT * cfg.Leverage / order.last_price), Symbol_List[order.sym]['qty_step'])
+                    if order.side == 'Buy':
+                        order.TP = price_trim((1 + (cfg.TP_percentage / cfg.Leverage / 100)) * order.last_price, Symbol_List[order.sym]['tick_size'])
+                        order.SL = price_trim((1 - (cfg.SL_percentage / cfg.Leverage / 100)) * order.last_price, Symbol_List[order.sym]['tick_size'])
+                    elif order.side == 'Sell':
+                        order.TP = price_trim((1 - (cfg.TP_percentage / cfg.Leverage / 100)) * order.last_price, Symbol_List[order.sym]['tick_size'])
+                        order.SL = price_trim((1 + (cfg.SL_percentage / cfg.Leverage / 100)) * order.last_price, Symbol_List[order.sym]['tick_size'])
+                    
+                    log.log_and_show('Opening {} {} {} position at about {}'.format(order.qty, order.sym, order.side, order.last_price))
+
+                    # Open order
+                    place_order = client.place_order(order.sym, order.side, order.qty, order.TP, order.SL)
+                    if place_order == False or place_order == '130023':
+                        # Will lqt right after position placed, black list this one
+                        Detention_List[order.sym] = {'data' : Symbol_List.pop(order.sym), 'time' : int(time())}
+                        System_Msg('Put {} into detention'. format(order.sym))
+                        del order
+                        delay.delay(cfg.open_order_interval)
+                        continue
+                    elif place_order == '130021':
+                        # Under balance, stop open order
+                        Pause_place_order = True
+                        del order
+                        delay.delay(cfg.open_order_interval)
+                        continue
+                    else:
+                        if place_order['ret_msg'] != 'OK':
+                            System_Msg('{} {} order create successfully !!\nwith return msg: {}'.format(order.sym, order.side, place_order['ret_msg']))
+                        else:
+                            log.log_and_show('{} {} order create successfully !!'.format(order.sym, order.side))
+
+                        order.order_id = place_order['result']['order_id']
+                        pnl.track_list[order.sym] = {'time' : int(time()), 'side' : order.side, 'pressed' : False}
+                        pnl.write_position_list()
+                        del place_order
+
+                    # Get newly placed order status
+                    retry = Retry_times
+                    while retry:
+                        order_status = client.get_order_status(order.sym, order.order_id)
+                        if order_status != False:
+                            match order_status:
+                                case 'Filled':
+                                    log.log('{} {} order ''{}'' Filled, retry: {} times'.format(order.sym, order.side, order.order_id, Retry_times - retry))
+                                    break
+                                case 'Rejected' | 'Cancelled':
+                                    retry = 0
+                                    break
+                                case _:
+                                    pass
+
+                            retry -= 1
+                            delay.delay(Retry_delay)
+                        else:
+                            break
+
+                    if retry == 0:
+                        # retry fail or error
+                        Error_Msg('Open {} position order Fail!! retry: {}, order_status: {}'.format(order.sym, Retry_times, order_status))
+                        del order
+                        del order_status
+                        delay.delay(cfg.open_order_interval)
+                        continue
+
+                    #Get entry price and Calculate new TP/SL
+                    order.last_price = client.get_entry_price(order.sym, order.side)
+                    if order.last_price != False:
+                        if order.side == 'Buy':
+                            order.TP = price_trim((1 + (cfg.TP_percentage / cfg.Leverage / 100)) * order.last_price, Symbol_List[order.sym]['tick_size'])
+                            order.SL = price_trim((1 - (cfg.SL_percentage / cfg.Leverage / 100)) * order.last_price, Symbol_List[order.sym]['tick_size'])
+                        elif order.side == 'Sell':
+                            order.TP = price_trim((1 - (cfg.TP_percentage / cfg.Leverage / 100)) * order.last_price, Symbol_List[order.sym]['tick_size'])
+                            order.SL = price_trim((1 + (cfg.SL_percentage / cfg.Leverage / 100)) * order.last_price, Symbol_List[order.sym]['tick_size'])
+                    else:
+                        del order
+                        delay.delay(cfg.open_order_interval)
+                        continue
+                    
+                    # Calculate and set Trailing stop
+                    if cfg.Trailing_Stop != 0:
+                        order.trailing = price_trim(order.last_price * (cfg.Trailing_Stop / cfg.Leverage / 100), Symbol_List[order.sym]['tick_size'])
+
+                        # Set trailing stop
+                        if client.set_trailing_stop(order.sym, order.side, order.trailing, order.TP, order.SL, cfg.Trigger) != True:
+                            del order
+                            delay.delay(cfg.open_order_interval)
+                            continue
+
+                    else:
+                        # fine tune TPSL
+                        if client.set_TPSL(order.sym, order.side, order.TP, order.SL, cfg.Trigger) != True:
+                            del order
+                            delay.delay(cfg.open_order_interval)
+                            continue
+                                                
+                    log.log_and_show('Entry pirce : {}'.format(order.last_price))
+                    if cfg.Trailing_Stop != 0:
+                        log.log_and_show('TP : {},  SL : {},  Trailing stop : {}\n'.format(order.TP, order.SL, order.trailing))
+                    else:
+                        log.log_and_show('TP : {},  SL : {}\n'.format(order.TP, order.SL))
+
+                    del order
+                    delay.delay(cfg.open_order_interval)
                 else:
-                    break
+                    if not pnl.start_track_pnl:
+                        pnl.start_track_pnl = True
+                        delay.delay(cfg.open_order_interval)
+                        continue
+                    
+                    if Pause_place_order and current_position_qty < Max_operate_position:
+                        System_Msg('Available balance lower than stop operate limit!!\nPause place order!!')
+                    
+                    detention_release(cfg.detention_time)
+                    
+                    collect()
+                    delay.anima_runtime(cfg.poll_order_interval, pnl.start_time)
 
-            if retry == 0:
-                # retry fail or error
-                Error_Msg('Open {} position order Fail!! order_status: {}'.format(order.sym, order_status))
-                del order
-                del order_status
-                delay.delay(cfg.open_order_interval)
-                continue
-
-            #Get entry price and Calculate new TP/SL
-            order.last_price = client.get_entry_price(order.sym, order.side)
-            if order.last_price != False:
-                if order.side == 'Buy':
-                    order.TP = price_trim((1 + (cfg.TP_percentage / cfg.Leverage / 100)) * order.last_price, Symbol_List[order.sym]['tick_size'])
-                    order.SL = price_trim((1 - (cfg.SL_percentage / cfg.Leverage / 100)) * order.last_price, Symbol_List[order.sym]['tick_size'])
-                elif order.side == 'Sell':
-                    order.TP = price_trim((1 - (cfg.TP_percentage / cfg.Leverage / 100)) * order.last_price, Symbol_List[order.sym]['tick_size'])
-                    order.SL = price_trim((1 + (cfg.SL_percentage / cfg.Leverage / 100)) * order.last_price, Symbol_List[order.sym]['tick_size'])
-            else:
-                del order
-                delay.delay(cfg.open_order_interval)
-                continue
-            
-            # Calculate and set Trailing stop
-            if cfg.Trailing_Stop != 0:
-                order.trailing = price_trim(order.last_price * (cfg.Trailing_Stop / cfg.Leverage / 100), Symbol_List[order.sym]['tick_size'])
-
-                # Set trailing stop
-                if client.set_trailing_stop(order.sym, order.side, order.trailing, order.TP, order.SL, cfg.Trigger) != True:
-                    del order
-                    delay.delay(cfg.open_order_interval)
-                    continue
-
-            else:
-                # fine tune TPSL
-                if client.set_TPSL(order.sym, order.side, order.TP, order.SL, cfg.Trigger) != True:
-                    del order
-                    delay.delay(cfg.open_order_interval)
-                    continue
-                                        
-            log.log_and_show('Entry pirce : {}'.format(order.last_price))
-            if cfg.Trailing_Stop != 0:
-                log.log_and_show('TP : {},  SL : {},  Trailing stop : {}\n'.format(order.TP, order.SL, order.trailing))
-            else:
-                log.log_and_show('TP : {},  SL : {}\n'.format(order.TP, order.SL))
-
-            del order
-            delay.delay(cfg.open_order_interval)
-        else:
-            if not pnl.start_track_pnl:
-                pnl.start_track_pnl = True
-                delay.delay(cfg.open_order_interval)
-                continue
-            
-            if Pause_place_order and current_position_qty < Max_operate_position:
-                System_Msg('Available balance lower than stop operate limit!!\nPause place order!!')
-            
-            detention_release(cfg.detention_time)
-            
-            collect()
-            delay.anima_runtime(cfg.poll_order_interval, pnl.start_time)
-
-
-if __name__ == '__main__':
-    argv_check()
-
-    while True:
-        try:
-            main()
         except Exception as Err:
             Err = str(Err)
             exc_type, exc_obj, exc_tb = sys.exc_info()
@@ -1001,12 +1000,11 @@ if __name__ == '__main__':
             match Err:
                 case '(''Connection aborted.'', RemoteDisconnected(''Remote end closed connection without response''))':
                     System_Msg(Err)
+                    log.log('Exception type: {}, in: <{}>, line: {}'.format(exc_type, fname, exc_tb.tb_lineno))
                     os.system('pause')
                     continue
                 case _:
                     Error_Msg(Err)
-                    Error_Msg('Exception type: {}, in: <{}>, line: {}'.format(exc_type, fname, exc_tb.tb_lineno))
+                    log.log('Exception type: {}, in: <{}>, line: {}'.format(exc_type, fname, exc_tb.tb_lineno))
                     os.system('pause')
                     os._exit(0)
-
-    # main()
