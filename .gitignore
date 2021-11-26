@@ -20,3 +20,5 @@ archive/
 *.png
 #
 *.jpg
+#
+./*.exe

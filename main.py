@@ -18,8 +18,8 @@ from Loading_animation import delay_anima
 from client import Client
 
 ##########################################################
-Version = '6.08'
-Date = '2021/11/25'
+Version = '6.09'
+Date = '2021/11/26'
 
 Symbol_List = {}
 Detention_List = {}
@@ -662,9 +662,6 @@ def main():
                             del retry
 
                             log.log_and_show('Close {} position successfully !!'.format(i))
-                            del order_status
-                            del place_order
-                            delete_list.append(i)
                             
                             closed_pnl = client.get_last_closed_pnl(i)
                             if closed_pnl != False:
@@ -673,8 +670,11 @@ def main():
                                     pnl.win_position += 1
                                 
                                 pnl.win_rate = pnl.win_position * 100 / pnl.closed_position
-                                del closed_pnl
-                            
+
+                            del closed_pnl
+                            del order_status
+                            del place_order
+                            delete_list.append(i)
                             delay.delay(cfg.open_order_interval)
                         else:
                             # pnl larger than threshold, renew the time
@@ -767,8 +767,8 @@ def main():
                         
                         pnl.win_rate = pnl.win_position * 100 / pnl.closed_position
                         log.log_and_show('{}\t{} position was cloasd, pnl: {} USDT'.format(i, pnl.track_list[i]['side'], closed_pnl))
-                        del closed_pnl
                         delete_list.append(i)
+                    del closed_pnl
         
         for i in delete_list:
             del pnl.track_list[i]
@@ -791,7 +791,7 @@ def main():
         show = 'Opened Position: {}\tBuy: {} Sell: {}\n'.format(current_position_qty, current_position_buy, current_position_sell)        
         if pnl.start_track_pnl:
             for i in pnl.track_list:
-                show += '\t{} \t{}\t{: 7.2f}% \t{}\n'.format(i, pnl.track_list[i]['side'], pnl.track_list[i]['pnl'], timestamp_format(pnl.track_list[i]['time']))
+                show += '\t{} \t{} \t{: 7.2f}% \t{}\n'.format(i, pnl.track_list[i]['side'], pnl.track_list[i]['pnl'], timestamp_format(pnl.track_list[i]['time']))
         log.log_and_show(show)
         del show
         
@@ -991,7 +991,8 @@ if __name__ == '__main__':
     while True:
         try:
             main()
-        except Exception as Err:            
+        except Exception as Err:
+            Err = str(Err)
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             log.show('')
