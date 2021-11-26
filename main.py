@@ -17,8 +17,9 @@ import Update_Symbol_List
 from Loading_animation import delay_anima
 from client import Client
 
+os.system('cls')
 ##########################################################
-Version = '6.09'
+Version = '6.10'
 Date = '2021/11/26'
 
 Symbol_List = {}
