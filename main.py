@@ -19,7 +19,7 @@ from client import Client
 
 os.system('cls')
 ##########################################################
-Version = '7.00'
+Version = '7.01'
 Date = '2021/11/26'
 
 Symbol_List = {}
@@ -53,9 +53,6 @@ class PNL_data:
             os.mkdir(dir)
         
         self.start_track_pnl = False
-        self.closed_position = 0
-        self.win_position = 0
-        self.win_rate = 0
         self.total_pnl = 0
         self.total_pnl_rate = 0
         self.track_list = {}
@@ -73,18 +70,12 @@ class PNL_data:
         with open('{}/pnl.json'.format(self.dir), 'r') as file:
             self.temp = json.load(file)
         try:
-            self.closed_position = self.temp['closed_position']
-            self.win_position = self.temp['win_position']
-            self.win_rate = self.temp['win_rate']
             self.total_pnl = self.temp['total_pnl']
             self.total_pnl_rate = self.temp['total_pnl_rate']
             self.start_balance = self.temp['start_balance']
             self.current_balance = self.temp['current_balance']
             self.start_time = self.temp['start_time']
         except KeyError:
-            self.closed_position = 0
-            self.win_position = 0
-            self.win_rate = 0
             self.total_pnl = 0
             self.total_pnl_rate = 0            
             self.start_balance = 'start'
@@ -95,9 +86,6 @@ class PNL_data:
         
     def write_pnl(self):
         self.temp = {
-            'closed_position' :  self.closed_position,
-            'win_position' :  self.win_position,
-            'win_rate' :  self.win_rate,
             'total_pnl' :  self.total_pnl,
             'total_pnl_rate' :  self.total_pnl_rate,
             'start_balance' :  self.start_balance,
@@ -526,7 +514,7 @@ if __name__ == '__main__':
                     
                     log.log_and_show('Start wallet balance: {: 13.2f}\tUSDT\n'.format(pnl.start_balance) +\
                                     'Balance available:\t {: 13.2f}\tUSDT\nBalance equity:\t {: 13.2f}\tUSDT\n'.format(wallet_available, wallet_equity) +\
-                                    'Unrealized pnl:\t {: 13.2f}\tUSDT, {: .2f}%\nWin rate:\t\t\t{: .2f}\t%'.format(pnl.total_pnl, pnl.total_pnl_rate, pnl.win_rate))
+                                    'Unrealized pnl:\t {: 13.2f}\tUSDT, {: .2f}%'.format(pnl.total_pnl, pnl.total_pnl_rate))
                     log.show('')
 
                     if wallet_available < cfg.stop_operate_USDT:
@@ -610,7 +598,7 @@ if __name__ == '__main__':
                             price = client.get_last_price(i)
                             if price == False:
                                 del price
-                                delay.delay(0.1)
+                                delay.delay(0.05)
                                 continue
                             
                             match cfg.Trigger:
@@ -679,20 +667,11 @@ if __name__ == '__main__':
                                         continue
                                     del retry
 
-                                    log.log_and_show('Close {} position successfully !!'.format(i))
                                     
-                                    closed_pnl = client.get_last_closed_pnl(i)
-                                    if closed_pnl != False:
-                                        pnl.closed_position += 1
-                                        if closed_pnl > 0:
-                                            pnl.win_position += 1
-                                        
-                                        pnl.win_rate = pnl.win_position * 100 / pnl.closed_position
-
-                                    del closed_pnl
                                     del order_status
                                     del place_order
                                     delete_list.append(i)
+                                    log.log_and_show('Close {} position successfully !!'.format(i))
                                     delay.delay(cfg.open_order_interval)
                                 else:
                                     # pnl larger than threshold, renew the time
@@ -773,20 +752,11 @@ if __name__ == '__main__':
 
                             pnl.track_list[i]['pnl'] = posi_pnl
                             del posi_pnl
-                            delay.delay(0.1)
+                            delay.delay(0.05)
                             
                         else:
                             # position  closed
-                            closed_pnl = client.get_last_closed_pnl(i)
-                            if closed_pnl != False:
-                                pnl.closed_position += 1
-                                if closed_pnl > 0:
-                                    pnl.win_position += 1
-                                
-                                pnl.win_rate = pnl.win_position * 100 / pnl.closed_position
-                                log.log_and_show('{}\t{} position was cloasd, pnl: {} USDT'.format(i, pnl.track_list[i]['side'], closed_pnl))
-                                delete_list.append(i)
-                            del closed_pnl
+                            delete_list.append(i)
                 
                 for i in delete_list:
                     del pnl.track_list[i]

@@ -28,8 +28,6 @@ class Client:
             return self.client.get_wallet_balance(coin = coin)['result'][coin]
         except Exception as err:
             err = str(err)
-            #if not err.endswith(self.pybit_except_ending):
-            # raise Exception(err)
             self.error_msg_check(err)
             ret_code = err.split('(ErrCode: ')[1].split(')')[0]
             ret_note = err.split('(ErrCode: ')[0]
@@ -47,8 +45,6 @@ class Client:
             return self.client.my_position(endpoint = endpoint)
         except Exception as err:
             err = str(err)
-            #if not err.endswith(self.pybit_except_ending):
-            # raise Exception(err)
             self.error_msg_check(err)
             ret_code = err.split('(ErrCode: ')[1].split(')')[0]
             ret_note = err.split('(ErrCode: ')[0]
@@ -71,8 +67,6 @@ class Client:
                 return False
         except Exception as err:
             err = str(err)
-            #if not err.endswith(self.pybit_except_ending):
-            # raise Exception(err)
             self.error_msg_check(err)
             ret_code = err.split('(ErrCode: ')[1].split(')')[0]
             ret_note = err.split('(ErrCode: ')[0]
@@ -87,8 +81,6 @@ class Client:
             return self.client.closed_profit_and_loss(symbol = symbol, limit = 1, exec_type = 'Trade')['result']['data'][0]['closed_pnl']
         except Exception as err:
             err = str(err)
-            #if not err.endswith(self.pybit_except_ending):
-            # raise Exception(err)
             self.error_msg_check(err)
             ret_code = err.split('(ErrCode: ')[1].split(')')[0]
             ret_note = err.split('(ErrCode: ')[0]
@@ -104,8 +96,6 @@ class Client:
             return True
         except Exception as err:
             err = str(err)
-            #if not err.endswith(self.pybit_except_ending):
-            # raise Exception(err)
             self.error_msg_check(err)
             ret_code = err.split('(ErrCode: ')[1].split(')')[0]
             ret_note = err.split('(ErrCode: ')[0]
@@ -122,8 +112,6 @@ class Client:
             return True
         except Exception as err:
             err = str(err)
-            #if not err.endswith(self.pybit_except_ending):
-            # raise Exception(err)
             self.error_msg_check(err)
             ret_code = err.split('(ErrCode: ')[1].split(')')[0]
             ret_note = err.split('(ErrCode: ')[0]
@@ -139,8 +127,6 @@ class Client:
             return True
         except Exception as err:
             err = str(err)
-            #if not err.endswith(self.pybit_except_ending):
-            # raise Exception(err)
             self.error_msg_check(err)
             ret_code = err.split('(ErrCode: ')[1].split(')')[0]
             ret_note = err.split('(ErrCode: ')[0]
@@ -155,8 +141,6 @@ class Client:
             return self.client.latest_information_for_symbol(symbol = symbol)['result'][0]
         except Exception as err:
             err = str(err)
-            #if not err.endswith(self.pybit_except_ending):
-            # raise Exception(err)
             self.error_msg_check(err)
             ret_code = err.split('(ErrCode: ')[1].split(')')[0]
             ret_note = err.split('(ErrCode: ')[0]
@@ -205,8 +189,6 @@ class Client:
                 raise Exception('fuction parameter error')
         except Exception as err:
             err = str(err)
-            #if not err.endswith(self.pybit_except_ending):
-            # raise Exception(err)
             self.error_msg_check(err)
             ret_code = err.split('(ErrCode: ')[1].split(')')[0]
             ret_note = err.split('(ErrCode: ')[0]
@@ -225,8 +207,6 @@ class Client:
             return self.client.query_active_order(symbol = symbol, order_id = ID)['result']['order_status']
         except Exception as err:
             err = str(err)
-            #if not err.endswith(self.pybit_except_ending):
-            # raise Exception(err)
             self.error_msg_check(err)
             ret_code = err.split('(ErrCode: ')[1].split(')')[0]
             ret_note = err.split('(ErrCode: ')[0]
@@ -248,8 +228,6 @@ class Client:
             return True
         except Exception as err:
             err = str(err)
-            #if not err.endswith(self.pybit_except_ending):
-            # raise Exception(err)
             self.error_msg_check(err)
             ret_code = err.split('(ErrCode: ')[1].split(')')[0]
             ret_note = err.split('(ErrCode: ')[0]
@@ -270,8 +248,6 @@ class Client:
             return True
         except Exception as err:
             err = str(err)
-            #if not err.endswith(self.pybit_except_ending):
-            # raise Exception(err)
             self.error_msg_check(err)
             ret_code = err.split('(ErrCode: ')[1].split(')')[0]
             ret_note = err.split('(ErrCode: ')[0]
