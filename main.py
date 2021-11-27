@@ -19,8 +19,8 @@ from client import Client
 
 os.system('cls')
 ##########################################################
-Version = '7.02'
-Date = '2021/11/26'
+Version = '7.03'
+Date = '2021/11/27'
 
 Symbol_List = {}
 Detention_List = {}
@@ -655,7 +655,7 @@ if __name__ == '__main__':
                                     if order_status != False:
                                         match order_status:
                                             case 'Filled':
-                                                log.log('{} {} order ''{}'' Filled, retry: {} times'.format(i, pnl.track_list[i]['side'], place_order['result']['order_id'], cfg.Retry_times - retry))
+                                                log.log('{} close order ''{}'' Filled, retry: {} times'.format(i, place_order['result']['order_id'], cfg.Retry_times - retry))
                                                 break
                                             case 'Rejected' | 'Cancelled':
                                                 retry = 0
@@ -729,7 +729,7 @@ if __name__ == '__main__':
                                     if order_status != False:
                                         match order_status:
                                             case 'Filled':
-                                                log.log('{} {} order ''{}'' Filled, retry: {} times'.format(i, pnl.track_list[i]['side'], place_order['result']['order_id'], cfg.Retry_times - retry))
+                                                log.log('{} press order ''{}'' Filled, retry: {} times'.format(i, place_order['result']['order_id'], cfg.Retry_times - retry))
                                                 break
                                             case 'Rejected' | 'Cancelled':
                                                 retry = 0
