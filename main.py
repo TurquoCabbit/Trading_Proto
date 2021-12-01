@@ -19,8 +19,8 @@ from client import Client
 
 os.system('cls')
 ##########################################################
-Version = '7.03'
-Date = '2021/11/27'
+Version = '7.04'
+Date = '2021/12/01'
 
 Symbol_List = {}
 Detention_List = {}
@@ -225,7 +225,7 @@ class CFG:
             return True
         
         except KeyError:
-            self.archive_cfg('cfg.json corrupted, old one archive as cfg_{}.json'.format(timestamp_format(os.path.getmtime('cfg.json'), '%Y%m%d-%H;%M;%S')))
+            self.archive_cfg('cfg.json corrupted, old one archive as cfg_{}.json'.format(timestamp_format(os.path.getctime('cfg.json'), '%Y%m%d-%H;%M;%S')))
     
     def update_version(self):
         self.version = Version
@@ -234,10 +234,10 @@ class CFG:
             json.dump(self.cfg, file, indent = 4)
     
     def upgrade_cfg(self):
-        System_Msg('cfg.json upgraded, old one archive as cfg_{}.json'.format(timestamp_format(os.path.getmtime('cfg.json'), '%Y%m%d-%H;%M;%S')))
+        System_Msg('cfg.json upgraded, old one archive as cfg_{}.json'.format(timestamp_format(os.path.getctime('cfg.json'), '%Y%m%d-%H;%M;%S')))
         if not os.path.isdir('archive'):
             os.mkdir('archive')
-        os.rename('cfg.json', 'archive/cfg_{}.json'.format(timestamp_format(os.path.getmtime('cfg.json'), '%Y%m%d-%H;%M;%S')))
+        os.rename('cfg.json', 'archive/cfg_{}.json'.format(timestamp_format(os.path.getctime('cfg.json'), '%Y%m%d-%H;%M;%S')))
 
         for i in self.cfg_init:
             if not i in self.cfg:
@@ -249,7 +249,7 @@ class CFG:
         System_Msg(msg)
         if not os.path.isdir('archive'):
             os.mkdir('archive')
-        os.rename('cfg.json', 'archive/cfg_{}.json'.format(timestamp_format(os.path.getmtime('cfg.json'), '%Y%m%d-%H;%M;%S')))
+        os.rename('cfg.json', 'archive/cfg_{}.json'.format(timestamp_format(os.path.getctime('cfg.json'), '%Y%m%d-%H;%M;%S')))
         self.new_cfg()
         log.log_and_show('Generate new cfg.json')
         os.system('pause')
@@ -331,7 +331,7 @@ def argv_check():
                     if os.path.isdir('pnl'):
                         if not os.path.isdir('archive'):
                             os.mkdir('archive')
-                        copytree('pnl', 'archive/pnl_{}'.format(timestamp_format(os.path.getmtime('pnl/balance.csv'), '%Y%m%d-%H;%M;%S')))
+                        copytree('pnl', 'archive/pnl_{}'.format(timestamp_format(os.path.getctime('pnl/balance.csv'), '%Y%m%d-%H;%M;%S')))
                         rmtree('pnl')
                 case _:
                     continue    
