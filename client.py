@@ -7,7 +7,8 @@ from error_code import get_error_msg
 
 class Client:
     def __init__(self, endpoint, api_key, api_secret) -> None:
-        self.client = HTTP(endpoint, api_key, api_secret)
+        self.client = HTTP(endpoint = endpoint, api_key = api_key, api_secret = api_secret, request_timeout = 60)
+        
         self.pybit_except_ending = '}.'
         self.log = Log('log')
     

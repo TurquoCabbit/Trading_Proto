@@ -19,8 +19,8 @@ from client import Client
 
 os.system('cls')
 ##########################################################
-Version = '7.04'
-Date = '2021/12/01'
+Version = '7.05'
+Date = '2021/12/02'
 
 Symbol_List = {}
 Detention_List = {}
