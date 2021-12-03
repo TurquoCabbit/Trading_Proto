@@ -19,8 +19,8 @@ from client import Client
 
 os.system('cls')
 ##########################################################
-Version = '7.05'
-Date = '2021/12/02'
+Version = '7.06'
+Date = '2021/12/03'
 
 Symbol_List = {}
 Detention_List = {}
@@ -658,7 +658,7 @@ if __name__ == '__main__':
                                                 log.log('{} close order ''{}'' Filled, retry: {} times'.format(i, place_order['result']['order_id'], cfg.Retry_times - retry))
                                                 break
                                             case 'Rejected' | 'Cancelled':
-                                                retry = 0
+                                                retry = 'F'
                                                 break
                                             case _:
                                                 pass
@@ -669,12 +669,19 @@ if __name__ == '__main__':
                                         break
 
                                 if retry == 0:
-                                    # retry fail or error
+                                    # retry fail
                                     Error_Msg('Close {} position order Fail!! retry: {}, order_status: {}'.format(i, cfg.Retry_times, order_status))
                                     del order_status
                                     del place_order
                                     del retry
                                     continue
+                                elif retry == 'F':
+                                    # Order status error
+                                    Error_Msg('Close {} position order Fail!!, order_status: {}'.format(i, order_status))
+                                    del order_status
+                                    del place_order
+                                    del retry
+                                    continue                                    
                                 del retry
 
                                 
@@ -732,7 +739,7 @@ if __name__ == '__main__':
                                                 log.log('{} press order ''{}'' Filled, retry: {} times'.format(i, place_order['result']['order_id'], cfg.Retry_times - retry))
                                                 break
                                             case 'Rejected' | 'Cancelled':
-                                                retry = 0
+                                                retry = 'F'
                                                 break
                                             case _:
                                                 pass
@@ -743,12 +750,19 @@ if __name__ == '__main__':
                                         break
 
                                 if retry == 0:
-                                    # retry fail or error
+                                    # retry fail
                                     Error_Msg('Press {} position order Fail!! retry: {}, order_status: {}'.format(i, cfg.Retry_times, order_status))
                                     del order_status
                                     del place_order
                                     del retry
                                     continue
+                                elif retry == 'F':
+                                    # Order status error
+                                    Error_Msg('Press {} position order Fail!!, order_status: {}'.format(i, order_status))
+                                    del order_status
+                                    del place_order
+                                    del retry
+                                    continue  
                                 del retry
 
                                 log.log_and_show('Press {}\t{} position successfully !!'.format(i, pnl.track_list[i]['side']))
@@ -911,7 +925,7 @@ if __name__ == '__main__':
                                 log.log('{} {} order ''{}'' Filled, retry: {} times'.format(order.sym, order.side, order.order_id, cfg.Retry_times - retry))
                                 break
                             case 'Rejected' | 'Cancelled':
-                                retry = 0
+                                retry = 'F'
                                 break
                             case _:
                                 pass
@@ -922,12 +936,22 @@ if __name__ == '__main__':
                         break
 
                 if retry == 0:
-                    # retry fail or error
+                    # retry fail
                     Error_Msg('Open {} position order Fail!! retry: {}, order_status: {}'.format(order.sym, cfg.Retry_times, order_status))
                     del order
                     del order_status
+                    del retry
+                    delay.delay(cfg.open_order_interval)
+                    continue                
+                elif retry == 'F':
+                    # Order status error
+                    Error_Msg('Open {} position order Fail!!, order_status: {}'.format(order.sym, order_status))
+                    del order
+                    del order_status
+                    del retry
                     delay.delay(cfg.open_order_interval)
                     continue
+                del retry
 
                 #Get entry price and Calculate new TP/SL
                 order.last_price = client.get_entry_price(order.sym, order.side)
