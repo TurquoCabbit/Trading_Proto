@@ -19,8 +19,8 @@ from client import Client
 
 os.system('cls')
 ##########################################################
-Version = '7.06'
-Date = '2021/12/03'
+Version = '7.061'
+Date = '2021/12/04'
 
 Symbol_List = {}
 Detention_List = {}
@@ -439,11 +439,9 @@ if __name__ == '__main__':
         ##############################################################################################################################
         ### Create client
         if cfg.Test_net:
-            # main net api and serect were passed
             log.log('Run on Test Net !!!')
             client = Client('https://api-testnet.bybit.com', api_key = sys.argv[1], api_secret = sys.argv[2])
         else:
-            # main net api and serect were passed
             log.log('Run on Main Net !!!')
             client = Client('https://api.bybit.com', api_key = sys.argv[1], api_secret = sys.argv[2])
 
