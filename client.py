@@ -1,4 +1,5 @@
 from pybit import HTTP
+from uuid import uuid4
 import os
 from datetime import datetime
 
@@ -258,4 +259,50 @@ class Client:
                     self.log.log('untrack_error_code')
                     return False
 
+    def set_transfer_spot_to_contract(self, amount = 0, coin = 'USDT'):
+        if amount == 0:
+            return False
         
+        try:
+            self.client.create_internal_transfer(transfer_id=str(uuid4()),
+                                                 coin = coin,
+                                                 amount = str(amount),
+                                                 from_account_type = 'SPOT',
+                                                 to_account_type = 'CONTRACT')
+            return True
+        except Exception as err:
+            err = str(err)
+            self.error_msg_check(err)
+            ret_code = err.split('(ErrCode: ')[1].split(')')[0]
+            ret_note = err.split('(ErrCode: ')[0]
+            self.Error_Msg('Transfer {} {} from SPOT to CONTRACT Fail!!\n#{} : {}\n{}'.format(amount, coin, ret_code, get_error_msg(ret_code), ret_note))
+            match ret_code:
+                case '38001' | '90001':
+                    return False
+                case _:
+                    self.log.log('untrack_error_code')
+                    return False
+
+    def set_transfer_contract_to_spot(self, amount = 0, coin = 'USDT'):
+        if amount == 0:
+            return False
+        
+        try:
+            self.client.create_internal_transfer(transfer_id=str(uuid4()),
+                                                 coin = coin,
+                                                 amount = str(amount),
+                                                 from_account_type = 'CONTRACT',
+                                                 to_account_type = 'SPOT')
+            return True
+        except Exception as err:
+            err = str(err)
+            self.error_msg_check(err)
+            ret_code = err.split('(ErrCode: ')[1].split(')')[0]
+            ret_note = err.split('(ErrCode: ')[0]
+            self.Error_Msg('Transfer {} {} from CONTRACT to SPOT Fail!!\n#{} : {}\n{}'.format(amount, coin, ret_code, get_error_msg(ret_code), ret_note))
+            match ret_code:
+                case '38001' | '90001':
+                    return False
+                case _:
+                    self.log.log('untrack_error_code')
+                    return False
