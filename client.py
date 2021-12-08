@@ -25,7 +25,29 @@ class Client_USDT_Perpetual:
             os.system('echo [31m{} : {}'.format(datetime.now().strftime('%H:%M:%S'), i))        
         os.system('echo [0m{} :'.format(datetime.now().strftime('%H:%M:%S')))
 
-    def get_wallet_balance(self, coin = "USDT"):
+    def query_symbol(self, coin = 'USDT'):
+        try:
+            self.data = self.client.query_symbol()['result']
+            self.symbol = []
+            for i in self.data:
+                if i['name'].endswith(coin):
+                    self.symbol.append(i)
+            del self.data 
+            return self.symbol
+
+        except Exception as err:
+            err = str(err)
+            self.error_msg_check(err)
+            ret_code = err.split('(ErrCode: ')[1].split(')')[0]
+            ret_note = err.split('(ErrCode: ')[0]
+            self.Error_Msg('Query symbol  Fail!!\n#{} : {}\n{}'.format(ret_code, get_error_msg(ret_code), ret_note))
+            match ret_code:
+                case _:
+                    self.log.log('untrack_error_code')
+                    return False
+
+
+    def get_wallet_balance(self, coin = 'USDT'):
         try:
             return self.client.get_wallet_balance(coin = coin)['result'][coin]
         except Exception as err:
@@ -35,7 +57,7 @@ class Client_USDT_Perpetual:
             ret_note = err.split('(ErrCode: ')[0]
             self.Error_Msg('Get wallet balance Fail!!\n#{} : {}\n{}'.format(ret_code, get_error_msg(ret_code), ret_note))
             match ret_code:
-                case '10003':   # invalid api_key 
+                case '10003' | '10005':   # invalid api_key or wrong Permission
                     os.system('pause')
                     os._exit(0)
                 case _:
@@ -52,6 +74,9 @@ class Client_USDT_Perpetual:
             ret_note = err.split('(ErrCode: ')[0]
             self.Error_Msg('Query Position Fail!!\n#{} : {}\n{}'.format(ret_code, get_error_msg(ret_code), ret_note))
             match ret_code:
+                case '10003' | '10005':   # invalid api_key or wrong Permission 
+                    os.system('pause')
+                    os._exit(0)
                 case _:
                     self.log.log('untrack_error_code')
                     os.system('pause')

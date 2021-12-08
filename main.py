@@ -19,7 +19,7 @@ from client import Client_USDT_Perpetual
 
 os.system('cls')
 ##########################################################
-Version = '7.080'
+Version = '7.090'
 Date = '2021/12/08'
 
 Symbol_List = {}
@@ -421,20 +421,6 @@ if __name__ == '__main__':
         ### Load history pnl data and init log    
         pnl = PNL_data('pnl')
         pnl.load()
-        ##############################################################################################################################
-        ### Load Symbol List
-        if not os.path.isfile('Symbol_list.json'):
-            if Update_Symbol_List.Query_USDT_Perpetual_Symbol():
-                with open('Symbol_list.json', 'r') as file:
-                    Symbol_query = json.load(file)
-        else:    
-            with open('Symbol_list.json', 'r') as file:
-                Symbol_query = json.load(file)
-
-            if Symbol_query['version'] != Update_Symbol_List.Symbol_list_ver:
-                if Update_Symbol_List.Query_USDT_Perpetual_Symbol():
-                    with open('Symbol_list.json', 'r') as file:
-                        Symbol_query = json.load(file)
 
         ##############################################################################################################################
         ### Create client
@@ -445,9 +431,13 @@ if __name__ == '__main__':
             log.log('Run on Main Net !!!')
             client = Client_USDT_Perpetual('https://api.bybit.com', api_key = sys.argv[1], api_secret = sys.argv[2])
 
-        ### Check Sym list
+        ### Query and Check Sym list
+        Symbol_query = client.query_symbol()
+        if Symbol_query == False:
+            raise Exception('Query symbol Faill!!')
+
         if cfg.Group == 'all':
-            for i in Symbol_query['data']:
+            for i in Symbol_query:
                 if not i['name'] in cfg.Black_list:
                     Symbol_List[i['name']] = {
                         'tick_size' : float(i['price_filter']['tick_size']),
@@ -458,7 +448,7 @@ if __name__ == '__main__':
                         'tpsl_mode' : 'Partial'
                     }
         else:
-            for i in Symbol_query['data']:
+            for i in Symbol_query:
                 if i['name'] in cfg.Token_list and not i['name'] in cfg.Black_list:
                     Symbol_List[i['name']] = {
                         'tick_size' : float(i['price_filter']['tick_size']),
