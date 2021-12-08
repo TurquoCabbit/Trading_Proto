@@ -13,13 +13,12 @@ from shutil import rmtree
 from shutil import copytree
 
 from Make_log import Log
-import Update_Symbol_List
 from Loading_animation import delay_anima
 from client import Client_USDT_Perpetual
 
 os.system('cls')
 ##########################################################
-Version = '7.100'
+Version = '7.110'
 Date = '2021/12/08'
 
 Symbol_List = {}
@@ -592,10 +591,11 @@ if __name__ == '__main__':
 
                 for i in pnl.track_list:
                     if i in opened_position:
-                        # position still going                   
+                        # position still going
                         price = client.get_last_price(i)
                         if price == False:
                             del price
+                            pnl.track_list[i]['pnl'] = 0
                             delay.delay(0.05)
                             continue
                         
@@ -613,7 +613,8 @@ if __name__ == '__main__':
                             posi_pnl *= -1
 
                         last_price = float(price['last_price'])
-                        mark_price = float(price['mark_price'])
+                        mark_price = float(price['mark_price'])                        
+                        pnl.track_list[i]['pnl'] = posi_pnl
                         del price
 
                         if cfg.position_expire_time != 0 and (time() - pnl.track_list[i]['time']) > cfg.position_expire_time:
@@ -762,7 +763,6 @@ if __name__ == '__main__':
                             else:
                                 log.log_and_show('Under balance for press the winned {} !!'.format(i))
 
-                        pnl.track_list[i]['pnl'] = posi_pnl
                         del posi_pnl
                         delay.delay(0.05)
                         
