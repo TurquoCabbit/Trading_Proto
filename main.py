@@ -19,7 +19,7 @@ from client import Client_USDT_Perpetual
 
 os.system('cls')
 ##########################################################
-Version = '7.090'
+Version = '7.100'
 Date = '2021/12/08'
 
 Symbol_List = {}
