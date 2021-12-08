@@ -15,12 +15,12 @@ from shutil import copytree
 from Make_log import Log
 import Update_Symbol_List
 from Loading_animation import delay_anima
-from client import Client
+from client import Client_USDT_Perpetual
 
 os.system('cls')
 ##########################################################
-Version = '7.070'
-Date = '2021/12/07'
+Version = '7.080'
+Date = '2021/12/08'
 
 Symbol_List = {}
 Detention_List = {}
@@ -440,10 +440,10 @@ if __name__ == '__main__':
         ### Create client
         if cfg.Test_net:
             log.log('Run on Test Net !!!')
-            client = Client('https://api-testnet.bybit.com', api_key = sys.argv[1], api_secret = sys.argv[2])
+            client = Client_USDT_Perpetual('https://api-testnet.bybit.com', api_key = sys.argv[1], api_secret = sys.argv[2])
         else:
             log.log('Run on Main Net !!!')
-            client = Client('https://api.bybit.com', api_key = sys.argv[1], api_secret = sys.argv[2])
+            client = Client_USDT_Perpetual('https://api.bybit.com', api_key = sys.argv[1], api_secret = sys.argv[2])
 
         ### Check Sym list
         if cfg.Group == 'all':

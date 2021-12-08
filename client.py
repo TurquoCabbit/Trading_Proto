@@ -6,7 +6,7 @@ from datetime import datetime
 from Make_log import Log
 from error_code import get_error_msg
 
-class Client:
+class Client_USDT_Perpetual:
     def __init__(self, endpoint, api_key, api_secret) -> None:
         self.client = HTTP(endpoint = endpoint, api_key = api_key, api_secret = api_secret, request_timeout = 60)
         
