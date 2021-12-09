@@ -18,8 +18,8 @@ from client import Client_USDT_Perpetual
 
 os.system('cls')
 ##########################################################
-Version = '7.110'
-Date = '2021/12/08'
+Version = '7.120'
+Date = '2021/12/09'
 
 Symbol_List = {}
 Detention_List = {}
@@ -1001,7 +1001,7 @@ if __name__ == '__main__':
             log.show('')
 
             match Err:
-                case '(''Connection aborted.'', RemoteDisconnected(''Remote end closed connection without response''))':
+                case "('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))":
                     System_Msg(Err)
                     log.log('Exception type: {}, in: <{}>, line: {}'.format(exc_type, fname, exc_tb.tb_lineno))
                     os.system('pause')
