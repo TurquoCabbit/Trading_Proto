@@ -18,8 +18,8 @@ from client import Client_USDT_Perpetual
 
 os.system('cls')
 ##########################################################
-Version = '7.120'
-Date = '2021/12/09'
+Version = '7.130'
+Date = '2021/12/10'
 
 Symbol_List = {}
 Detention_List = {}
@@ -791,7 +791,12 @@ if __name__ == '__main__':
             show = 'Opened Position: {}\tBuy: {} Sell: {}\n'.format(current_position_qty, current_position_buy, current_position_sell)        
             if pnl.start_track_pnl:
                 for i in pnl.track_list:
-                    show += '\t{} \t{} \t{: 7.2f}% \t{}\n'.format(i, pnl.track_list[i]['side'], pnl.track_list[i]['pnl'], timestamp_format(pnl.track_list[i]['time']))
+                    show += '\t{} \t{} \t{: 7.2f}%\t'.format(i, pnl.track_list[i]['side'], pnl.track_list[i]['pnl'])
+                    if pnl.track_list[i]['pressed']:
+                        show += 'Pressed'
+                    else:
+                        show += '       '
+                    show += '\t{}\n'.format(timestamp_format(pnl.track_list[i]['time']))
             log.log_and_show(show)
             del show
             
@@ -855,7 +860,7 @@ if __name__ == '__main__':
                 order.mark_price = float(price['mark_price'])
                 del price
 
-                # Check if MarkPrice and LadtPrice detach exceed SL or TP, put into to detention
+                # Check if MarkPrice and LastPrice detach exceed SL or TP, put into to detention
                 detach_percentage = abs(order.last_price - order.mark_price) / order.last_price * 100 * cfg.Leverage
                 if detach_percentage > cfg.SL_percentage or detach_percentage > cfg.TP_percentage:
                     Detention_List[order.sym] = {'data' : Symbol_List.pop(order.sym), 'time' : int(time())}
