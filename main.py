@@ -18,8 +18,8 @@ from client import Client_USDT_Perpetual
 
 os.system('cls')
 ##########################################################
-Version = '7.130'
-Date = '2021/12/10'
+Version = '7.140'
+Date = '2021/12/15'
 
 Symbol_List = {}
 Detention_List = {}
@@ -201,7 +201,7 @@ class CFG:
             self.Trigger = self.cfg['Trigger']
             self.Trailing_Stop = abs(self.cfg['Trailing_Stop_percentag'])
             self.position_expire_time = abs(self.cfg['Position_expire_time'])
-            self.position_expire_thres = abs(self.cfg['Position_expire_thres_percentag'])
+            self.position_expire_thres = self.cfg['Position_expire_thres_percentag']
 
             self.Group = self.cfg['Opreate_group']
             self.open_order_interval = abs(self.cfg['Open_interval'])
