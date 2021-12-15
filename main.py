@@ -18,7 +18,7 @@ from client import Client_USDT_Perpetual
 
 os.system('cls')
 ##########################################################
-Version = '7.140'
+Version = '7.150'
 Date = '2021/12/15'
 
 Symbol_List = {}
@@ -435,6 +435,7 @@ if __name__ == '__main__':
         if Symbol_query == False:
             raise Exception('Query symbol Faill!!')
 
+        symbol_temp = []
         if cfg.Group == 'all':
             for i in Symbol_query:
                 if not i['name'] in cfg.Black_list:
@@ -446,6 +447,7 @@ if __name__ == '__main__':
                         'leverage' : 0,
                         'tpsl_mode' : 'Partial'
                     }
+                    symbol_temp.append('"{}",\n'.format(i['name']))
         else:
             for i in Symbol_query:
                 if i['name'] in cfg.Token_list and not i['name'] in cfg.Black_list:
@@ -457,7 +459,14 @@ if __name__ == '__main__':
                         'leverage' : 0,
                         'tpsl_mode' : 'Partial'
                     }
+                    symbol_temp.append('"{}",\n'.format(i['name']))
         del Symbol_query
+
+        with open('pnl/trade_symbol.log', 'w') as file:
+            file.write('{}\tTrading symbols\n'.format(len(symbol_temp)))
+            file.writelines(symbol_temp)
+        del file
+        del symbol_temp
 
     except Exception as Err:
         Err = str(Err)
