@@ -18,8 +18,8 @@ from client import Client_USDT_Perpetual
 
 os.system('cls')
 ##########################################################
-Version = '7.150'
-Date = '2021/12/15'
+Version = '0.7.160'
+Date = '2021/12/17'
 
 Symbol_List = {}
 Detention_List = {}
@@ -363,14 +363,15 @@ if __name__ == '__main__':
             os.system('pause')
 
         if not cfg.load_cfg():
-            if (float)(cfg.version.split('.')[0]) != (float)(Version.split('.')[0]):
+            if (float)(cfg.version.split('.')[0]) != (float)(Version.split('.')[0]) or \
+               (float)(cfg.version.split('.')[1]) != (float)(Version.split('.')[1]):
                 # Main version different
                 cfg.upgrade_cfg()
                 log.show('Upgrade cfg.json, please check new config or press any key to continue')
                 os.system('pause')
                 cfg.load_cfg()
 
-            elif (float)(cfg.version.split('.')[1]) < (float)(Version.split('.')[1]):
+            elif (float)(cfg.version.split('.')[2]) < (float)(Version.split('.')[2]):
                 #Sub version different
                 cfg.update_version()
                 cfg.load_cfg()
