@@ -18,7 +18,7 @@ from client import Client_USDT_Perpetual
 
 os.system('cls')
 ##########################################################
-Version = '0.7.160'
+Version = '0.7.170'
 Date = '2021/12/17'
 
 Symbol_List = {}
@@ -497,7 +497,6 @@ if __name__ == '__main__':
                 Max_operate_position = cfg.Max_operate_position
 
 
-
             ### Query current wallet balance
             wallet = client.get_wallet_balance()
             if wallet != False:
@@ -706,12 +705,29 @@ if __name__ == '__main__':
                                     del mark_price
                                     del detach_percentage
                                     continue
+                                else:
+                                    qty = qty_trim((cfg.press_the_winned_USDT * cfg.Leverage / last_price), Symbol_List[i]['qty_step'])
+                                    del last_price
+                                    del mark_price
+                                    del detach_percentage
 
-                                qty = qty_trim((cfg.press_the_winned_USDT * cfg.Leverage / last_price), Symbol_List[i]['qty_step'])
-                                del last_price
-                                del mark_price
-                                del detach_percentage
+                                # Set Full Position TP/SL
+                                if Symbol_List[i]['tpsl_mode'] != 'Full':
+                                    if client.set_tpsl_mode(i) == True:
+                                        Symbol_List[i]['tpsl_mode'] = 'Full'
 
+                                # Switch to isolated margin mode and set leverage
+                                if Symbol_List[i]['isolate'] != True:
+                                    if client.set_margin_mode(i, True, cfg.Leverage) == True:
+                                        Symbol_List[i]['isolate'] = True
+                                        Symbol_List[i]['leverage'] = cfg.Leverage
+
+                                # Modify leverage
+                                if Symbol_List[i]['leverage'] != cfg.Leverage:
+                                    if client.set_leverage(i, cfg.Leverage) == True:
+                                        Symbol_List[i]['leverage'] = cfg.Leverage
+
+                                # open order
                                 place_order = client.place_order(i, pnl.track_list[i]['side'], qty, Position_List[i][pnl.track_list[i]['side']]['take_profit'], Position_List[i][pnl.track_list[i]['side']]['stop_loss'])
                                 if place_order == False or place_order == '130023':
                                     # Will lqt right after position placed
