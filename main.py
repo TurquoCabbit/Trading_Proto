@@ -18,7 +18,7 @@ from client import Client_USDT_Perpetual
 
 os.system('cls')
 ##########################################################
-Version = '0.7.180'
+Version = '0.7.190'
 Date = '2021/12/23'
 
 Symbol_List = {}
@@ -146,7 +146,7 @@ class CFG:
         self.Retry_delay = None
         
         self.cfg_init = {
-                            'Version' : Version,
+                            'Version' : version,
                             'Run_on_testnet' : True,
                             'Operate_position' : 2,
                             'Order_value_USDT' : 10,
