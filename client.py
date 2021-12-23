@@ -351,15 +351,29 @@ class Client_Spot:
             os.system('echo [31m{} : {}'.format(datetime.now().strftime('%H:%M:%S'), i))        
         os.system('echo [0m{} :'.format(datetime.now().strftime('%H:%M:%S')))
 
-    def query_symbol(self, coin = 'USDT'):
+    def query_symbol(self, base = False, quote = False):
         try:
             data = self.client.query_symbol()['result']
+            if not base and not quote:
+                return data
             
             symbol = []
-            for i in data:
-                if i['quoteCurrency'] == coin:
-                    symbol.append(i)
-            del data 
+            if not quote:
+                for i in data:
+                    if i['baseCurrency'] == base:
+                        symbol.append(i)
+                del data
+            elif not base:
+                for i in data:
+                    if i['quoteCurrency'] == quote:
+                        symbol.append(i)
+                del data
+            else:
+                for i in data:
+                    if i['quoteCurrency'] == quote and i['baseCurrency'] == base:
+                        symbol.append(i)
+                del data
+
             return symbol
 
         except Exception as err:
