@@ -18,7 +18,7 @@ from client import Client_USDT_Perpetual
 
 os.system('cls')
 ##########################################################
-Version = '0.7.190'
+Version = '0.7.191'
 Date = '2021/12/23'
 
 Symbol_List = {}
@@ -326,14 +326,14 @@ def argv_check():
 
         for i in cmd:
             match i:
-                case '-R':                
+                case '-R':
                     if os.path.isdir('pnl'):
                         if not os.path.isdir('archive'):
                             os.mkdir('archive')
                         copytree('pnl', 'archive/pnl_{}'.format(timestamp_format(os.path.getctime('pnl/balance.csv'), '%Y%m%d-%H;%M;%S')))
                         rmtree('pnl')
                 case _:
-                    continue    
+                    pass    
 
 def detention_release(Detention_time = 86400):
     if len(Detention_List) == 0:
