@@ -18,8 +18,8 @@ from client import Client_USDT_Perpetual
 
 os.system('cls')
 ##########################################################
-Version = '0.7.191'
-Date = '2021/12/23'
+Version = '0.7.200'
+Date = '2021/12/24'
 
 Symbol_List = {}
 Detention_List = {}
@@ -118,6 +118,21 @@ class PNL_data:
             return True
         except:
             return False
+
+    def write_trading_symbol(self, symbols):
+        with open('{}/trade_symbol.log'.format(self.dir), 'w') as file:
+            file.write('{}\tTrading symbols\n'.format(len(symbols)))
+            file.writelines(symbols)
+        del file
+
+    
+    def archive(self):
+        if os.path.isdir(self.dir):
+            if not os.path.isdir('archive'):
+                os.mkdir('archive')
+            copytree(self.dir, 'archive/{}_{}'.format(self.dir, timestamp_format(os.path.getctime('{}/balance.csv'.format(self.dir)), '%Y%m%d-%H;%M;%S')))
+            rmtree(self.dir)
+            os.mkdir(self.dir)
 
 class CFG:
     def __init__(self, version) -> None:
@@ -327,11 +342,7 @@ def argv_check():
         for i in cmd:
             match i:
                 case '-R':
-                    if os.path.isdir('pnl'):
-                        if not os.path.isdir('archive'):
-                            os.mkdir('archive')
-                        copytree('pnl', 'archive/pnl_{}'.format(timestamp_format(os.path.getctime('pnl/balance.csv'), '%Y%m%d-%H;%M;%S')))
-                        rmtree('pnl')
+                    pnl.archive()
                 case _:
                     pass    
 
@@ -350,6 +361,7 @@ def detention_release(Detention_time = 86400):
     del release
     
 if __name__ == '__main__':
+    pnl = PNL_data('pnl')
     argv_check()
 
     try:
@@ -418,11 +430,10 @@ if __name__ == '__main__':
                 '\tDetention_time: {}s\n\tRetry_times: {}\n\tRetry_delay: {}'.format(cfg.detention_time, cfg.Retry_times, cfg.Retry_delay))
 
         ##############################################################################################################################
-        ### Load history pnl data and init log    
-        pnl = PNL_data('pnl')
+        ### Load history pnl data and init log
         pnl.load()
 
-        ##############################################################################################################################
+
         ### Create client
         if cfg.Test_net:
             log.log('Run on Test Net !!!')
@@ -463,10 +474,7 @@ if __name__ == '__main__':
                     symbol_temp.append('"{}",\n'.format(i['name']))
         del Symbol_query
 
-        with open('pnl/trade_symbol.log', 'w') as file:
-            file.write('{}\tTrading symbols\n'.format(len(symbol_temp)))
-            file.writelines(symbol_temp)
-        del file
+        pnl.write_trading_symbol(symbol_temp)        
         del symbol_temp
 
     except Exception as Err:
