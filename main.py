@@ -18,7 +18,7 @@ from client import Client_USDT_Perpetual
 
 os.system('cls')
 ##########################################################
-Version = '0.7.200'
+Version = '0.7.210'
 Date = '2021/12/24'
 
 Symbol_List = {}
@@ -362,13 +362,12 @@ def detention_release(Detention_time = 86400):
     
 if __name__ == '__main__':
     pnl = PNL_data('pnl')
+    cfg = CFG(Version)
     argv_check()
 
     try:
         ##############################################################################################################################
         ### Load Cfg File
-        cfg = CFG(Version)
-
         if not os.path.isfile('cfg.json'):
             System_Msg('cfg.json file missing. Generate a new one')
             cfg.new_cfg()
@@ -433,7 +432,7 @@ if __name__ == '__main__':
         ### Load history pnl data and init log
         pnl.load()
 
-
+        ##############################################################################################################################
         ### Create client
         if cfg.Test_net:
             log.log('Run on Test Net !!!')
