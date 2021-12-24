@@ -18,7 +18,7 @@ from client import Client_USDT_Perpetual
 
 os.system('cls')
 ##########################################################
-Version = '0.7.210'
+Version = '0.7.220'
 Date = '2021/12/24'
 
 Symbol_List = {}
@@ -241,6 +241,18 @@ class CFG:
         except KeyError:
             self.archive_cfg('cfg.json corrupted, old one archive as cfg_{}.json'.format(timestamp_format(os.path.getctime('cfg.json'), '%Y%m%d-%H;%M;%S')))
     
+    def log_cfg(self):
+        str = 'cfg.json loaded\n\tVersion: {}\n\tRun on test net: {}\n\t'.format(self.version, self.Test_net)
+        str += 'Operate position: {}\n\tOperate USDT: {}\n\tStop_operate_USDT: {}\n\t'.format( self.Max_operate_position, self.operate_USDT, self.stop_operate_USDT)
+        str += 'Press_the_winned_USDT: {}\n\tPress_the_winned_thres_percentag: {}%\n\t'.format(self.press_the_winned_USDT, self.press_the_winned_thres)
+        str += 'Leverage: {}\n\tOperate side: {}\n\tTP: {}%\n\tSL: {}%\n\t'.format(self.Leverage, self.side, self.TP_percentage, self.SL_percentage)
+        str += 'TPSL trigger: {}\n\tTrailing stop: {}%\n\t'.format(self.Trigger, self.Trailing_Stop)
+        str += 'Position_expire_time: {}s\n\tPosition_expire_thres_percentag: {}%\n\t'.format(self.position_expire_time, self.position_expire_thres)
+        str += 'Operate group: {}\n\tOpen order interval: {}s\n\tPolling interval: {}s\n\t'.format(self.Group, self.open_order_interval, self.poll_order_interval)
+        str += 'Detention_time: {}s\n\tRetry_times: {}\n\tRetry_delay: {}'.format(self.detention_time, self.Retry_times, self.Retry_delay)
+        log.log(str)
+        del str
+
     def update_version(self):
         self.version = Version
         self.cfg['Version'] = self.version
@@ -420,13 +432,7 @@ if __name__ == '__main__':
         if cfg.Retry_delay < 0.1:
             cfg.Retry_delay = 0.1
         
-        log.log('cfg.json loaded\n\tVersion: {}\n\tRun on test net: {}\n\tOperate position: {}\n\tOperate USDT: {}\n'.format(cfg.version, cfg.Test_net, cfg.Max_operate_position, cfg.operate_USDT) +\
-                '\tStop_operate_USDT: {}\n\tPress_the_winned_USDT: {}\n\tPress_the_winned_thres_percentag: {}%\n'.format(cfg.stop_operate_USDT, cfg.press_the_winned_USDT, cfg.press_the_winned_thres) +\
-                '\tLeverage: {}\n\tOperate side: {}\n\tTP: {}%\n\tSL: {}%\n'.format(cfg.Leverage, cfg.side, cfg.TP_percentage, cfg.SL_percentage) +\
-                '\tTPSL trigger: {}\n\tTrailing stop: {}%\n'.format(cfg.Trigger, cfg.Trailing_Stop) +\
-                '\tPosition_expire_time: {}s\n\tPosition_expire_thres_percentag: {}%\n'.format(cfg.position_expire_time, cfg.position_expire_thres) +\
-                '\tOperate group: {}\n\tOpen order interval: {}s\n\tPolling interval: {}s\n'.format(cfg.Group, cfg.open_order_interval, cfg.poll_order_interval) +\
-                '\tDetention_time: {}s\n\tRetry_times: {}\n\tRetry_delay: {}'.format(cfg.detention_time, cfg.Retry_times, cfg.Retry_delay))
+        cfg.log_cfg()
 
         ##############################################################################################################################
         ### Load history pnl data and init log
