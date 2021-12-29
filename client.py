@@ -105,7 +105,11 @@ class Client_USDT_Perpetual:
 
     def get_last_closed_pnl(self, symbol):
         try:
-            return self.client.closed_profit_and_loss(symbol = symbol, limit = 1, exec_type = 'Trade')['result']['data'][0]['closed_pnl']
+            rc = self.client.closed_profit_and_loss(symbol = symbol, limit = 1, exec_type = 'Trade')['result']['data']
+            if len(rc) > 0:
+                return rc[0]['closed_pnl']
+            else:
+                return False
         except Exception as err:
             err = str(err)
             self.error_msg_check(err)
@@ -165,7 +169,11 @@ class Client_USDT_Perpetual:
 
     def get_last_price(self, symbol):
         try:
-            return self.client.latest_information_for_symbol(symbol = symbol)['result'][0]
+            rc = self.client.latest_information_for_symbol(symbol = symbol)['result']
+            if len(rc) > 0:
+                return rc[0]
+            else:
+                return False
         except Exception as err:
             err = str(err)
             self.error_msg_check(err)
@@ -374,7 +382,10 @@ class Client_Spot:
                         symbol.append(i)
                 del data
 
-            return symbol
+            if len(symbol) > 0:
+                return symbol
+            else:
+                return False
 
         except Exception as err:
             err = str(err)

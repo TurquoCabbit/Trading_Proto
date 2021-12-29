@@ -18,8 +18,8 @@ from client import Client_USDT_Perpetual
 
 os.system('cls')
 ##########################################################
-Version = '0.7.220'
-Date = '2021/12/24'
+Version = '0.7.230'
+Date = '2021/12/29'
 
 Symbol_List = {}
 Detention_List = {}
@@ -851,6 +851,8 @@ if __name__ == '__main__':
                     order.side = rand_side()
                 else:
                     order.side = cfg.side
+                
+                log.log('Picked position : {} {}'.format(order.sym, order.side))
 
                 # Set Full Position TP/SL
                 if Symbol_List[order.sym]['tpsl_mode'] != 'Full':
