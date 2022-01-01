@@ -3,7 +3,7 @@ import os
 from time import sleep
 from math import floor
 
-from client import Client
+from client import Client_USDT_Perpetual
 
 if __name__ == '__main__':
     os.system('cls')
@@ -20,7 +20,7 @@ if __name__ == '__main__':
     amount = float(sys.argv[3])
     amount = floor(amount * 10000) / 10000
 
-    client = Client('https://api-testnet.bybit.com', api_key = sys.argv[1], api_secret = sys.argv[2])
+    client = Client_USDT_Perpetual('https://api-testnet.bybit.com', api_key = sys.argv[1], api_secret = sys.argv[2])
 
     #Get avlliable balance
     balance = client.get_wallet_balance()
@@ -32,6 +32,7 @@ if __name__ == '__main__':
     balance = floor(balance * 10000) / 10000
     if balance == amount:
         os._exit(0)
+    
 
     if balance > 0:
         if not client.set_transfer_contract_to_spot(balance):
